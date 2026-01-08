@@ -168,6 +168,7 @@ export default function DigitalTwinViewer({ alerts }) {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [markerPositions, setMarkerPositions] = useState([]);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [webglError, setWebglError] = useState(false);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -189,14 +190,25 @@ export default function DigitalTwinViewer({ alerts }) {
     camera.lookAt(0, 2, 0);
     cameraRef.current = camera;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    // Renderer with error handling
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true,
+        failIfMajorPerformanceCaveat: false
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+      rendererRef.current = renderer;
+    } catch (error) {
+      console.error('WebGL initialization failed:', error);
+      setWebglError(true);
+      return;
+    }
 
     // Lighting
     const ambientLight = new THREE.AmbientLight(0x404050, 0.5);
@@ -289,8 +301,10 @@ export default function DigitalTwinViewer({ alerts }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      renderer.dispose();
-      container.removeChild(renderer.domElement);
+      if (renderer && container.contains(renderer.domElement)) {
+        renderer.dispose();
+        container.removeChild(renderer.domElement);
+      }
     };
   }, []);
 
@@ -341,6 +355,34 @@ export default function DigitalTwinViewer({ alerts }) {
 
   return (
     <div className="relative flex-1 bg-slate-900 overflow-hidden">
+      {/* WebGL Error Fallback */}
+      {webglError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+          <div className="text-center max-w-md px-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700 flex items-center justify-center">
+              <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">3D View Unavailable</h3>
+            <p className="text-slate-400 mb-6">WebGL is not supported or enabled in your browser. The 3D digital twin requires WebGL to render.</p>
+            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <p className="text-sm text-slate-300 mb-2 font-medium">Active Alerts:</p>
+              <div className="space-y-2">
+                {alerts.map(alert => (
+                  <div key={alert.id} className="flex items-center justify-between text-sm bg-slate-700/50 rounded px-3 py-2">
+                    <span className="text-slate-200">{alert.locationName}</span>
+                    <span className={`font-semibold ${alert.type === 'moisture' ? 'text-red-400' : 'text-orange-400'}`}>
+                      {alert.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* 3D Canvas Container */}
       <div 
         ref={containerRef} 
