@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Navigation } from 'lucide-react';
+import { Plus, Minus, Navigation, RotateCw } from 'lucide-react';
 
 export default function ViewControls({ activeView, onViewChange, onZoom }) {
   const views = [
@@ -48,6 +48,7 @@ export default function ViewControls({ activeView, onViewChange, onZoom }) {
         <button 
           onClick={() => onZoom('reset')}
           className="w-9 h-9 bg-slate-800/80 backdrop-blur-sm rounded-lg border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+          title="Reset view"
         >
           <Navigation className="w-4 h-4" />
         </button>

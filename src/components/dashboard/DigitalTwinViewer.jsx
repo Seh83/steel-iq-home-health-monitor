@@ -3,10 +3,13 @@ import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import AlertTooltip from './AlertTooltip';
 import ViewControls from './ViewControls';
+import ComponentPropertiesPanel from './ComponentPropertiesPanel';
 
 // Steel frame building generator
 function createSteelFrame() {
   const group = new THREE.Group();
+  const components = []; // Track all components for interaction
+  
   const steelMaterial = new THREE.MeshStandardMaterial({ 
     color: 0x4a5568,
     metalness: 0.8,
@@ -15,9 +18,29 @@ function createSteelFrame() {
     opacity: 0.9
   });
 
-  // Helper to create a steel beam
+  // Helper to create a steel beam with metadata
   const createBeam = (width, height, depth) => {
     return new THREE.BoxGeometry(width, height, depth);
+  };
+  
+  // Helper to add component with metadata
+  const addComponent = (geometry, position, type, componentId, additionalData = {}) => {
+    const mesh = new THREE.Mesh(geometry, steelMaterial.clone());
+    mesh.position.set(...position);
+    
+    // Store metadata
+    mesh.userData = {
+      id: componentId,
+      type: type,
+      material: 'Steel C-Channel',
+      position: { x: position[0], y: position[1], z: position[2] },
+      selectable: true,
+      ...additionalData
+    };
+    
+    group.add(mesh);
+    components.push(mesh);
+    return mesh;
   };
 
   // Floor dimensions
@@ -28,102 +51,177 @@ function createSteelFrame() {
   const beamSize = 0.08;
 
   // Create floor frame
-  const floorBeams = [
-    { pos: [0, 0, -floorDepth/2], size: [floorWidth, beamSize, beamSize] },
-    { pos: [0, 0, floorDepth/2], size: [floorWidth, beamSize, beamSize] },
-    { pos: [-floorWidth/2, 0, 0], size: [beamSize, beamSize, floorDepth] },
-    { pos: [floorWidth/2, 0, 0], size: [beamSize, beamSize, floorDepth] },
-  ];
+  let componentCounter = 1;
+  
+  // Main floor beams
+  addComponent(
+    createBeam(floorWidth, beamSize, beamSize),
+    [0, 0, -floorDepth/2],
+    'Floor Beam',
+    `FB-${componentCounter++}`,
+    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.32 kN' }, { label: 'Temp', value: '72°F' }] }
+  );
+  addComponent(
+    createBeam(floorWidth, beamSize, beamSize),
+    [0, 0, floorDepth/2],
+    'Floor Beam',
+    `FB-${componentCounter++}`,
+    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.28 kN' }, { label: 'Temp', value: '71°F' }] }
+  );
+  addComponent(
+    createBeam(beamSize, beamSize, floorDepth),
+    [-floorWidth/2, 0, 0],
+    'Floor Beam',
+    `FB-${componentCounter++}`,
+    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.35 kN' }, { label: 'Temp', value: '70°F' }] }
+  );
+  addComponent(
+    createBeam(beamSize, beamSize, floorDepth),
+    [floorWidth/2, 0, 0],
+    'Floor Beam',
+    `FB-${componentCounter++}`,
+    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.29 kN' }, { label: 'Temp', value: '73°F' }] }
+  );
 
   // Floor joists
+  let joistCounter = 1;
   for (let x = -floorWidth/2 + studSpacing; x < floorWidth/2; x += studSpacing) {
-    floorBeams.push({ pos: [x, 0, 0], size: [beamSize, beamSize, floorDepth] });
+    addComponent(
+      createBeam(beamSize, beamSize, floorDepth),
+      [x, 0, 0],
+      'Floor Joist',
+      `FJ-${joistCounter++}`,
+      { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '800 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-10', installDate: '2024-06-05', readings: [{ label: 'Stress', value: '0.21 kN' }, { label: 'Temp', value: '72°F' }] }
+    );
   }
 
-  floorBeams.forEach(beam => {
-    const geometry = createBeam(...beam.size);
-    const mesh = new THREE.Mesh(geometry, steelMaterial);
-    mesh.position.set(...beam.pos);
-    group.add(mesh);
-  });
-
   // Wall studs - Front and Back
+  let studCounter = 1;
   for (let x = -floorWidth/2; x <= floorWidth/2; x += studSpacing) {
     // Front wall
-    const frontStud = new THREE.Mesh(createBeam(beamSize, wallHeight, beamSize), steelMaterial);
-    frontStud.position.set(x, wallHeight/2, -floorDepth/2);
-    group.add(frontStud);
+    addComponent(
+      createBeam(beamSize, wallHeight, beamSize),
+      [x, wallHeight/2, -floorDepth/2],
+      'Wall Stud',
+      `WS-F${studCounter}`,
+      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.18 kN' }, { label: 'Temp', value: '71°F' }] }
+    );
 
     // Back wall
-    const backStud = new THREE.Mesh(createBeam(beamSize, wallHeight, beamSize), steelMaterial);
-    backStud.position.set(x, wallHeight/2, floorDepth/2);
-    group.add(backStud);
+    addComponent(
+      createBeam(beamSize, wallHeight, beamSize),
+      [x, wallHeight/2, floorDepth/2],
+      'Wall Stud',
+      `WS-B${studCounter}`,
+      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.16 kN' }, { label: 'Temp', value: '72°F' }] }
+    );
+    studCounter++;
   }
 
   // Wall studs - Left and Right
   for (let z = -floorDepth/2 + studSpacing; z < floorDepth/2; z += studSpacing) {
     // Left wall
-    const leftStud = new THREE.Mesh(createBeam(beamSize, wallHeight, beamSize), steelMaterial);
-    leftStud.position.set(-floorWidth/2, wallHeight/2, z);
-    group.add(leftStud);
+    addComponent(
+      createBeam(beamSize, wallHeight, beamSize),
+      [-floorWidth/2, wallHeight/2, z],
+      'Wall Stud',
+      `WS-L${studCounter}`,
+      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.19 kN' }, { label: 'Temp', value: '70°F' }] }
+    );
 
     // Right wall
-    const rightStud = new THREE.Mesh(createBeam(beamSize, wallHeight, beamSize), steelMaterial);
-    rightStud.position.set(floorWidth/2, wallHeight/2, z);
-    group.add(rightStud);
+    addComponent(
+      createBeam(beamSize, wallHeight, beamSize),
+      [floorWidth/2, wallHeight/2, z],
+      'Wall Stud',
+      `WS-R${studCounter}`,
+      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.17 kN' }, { label: 'Temp', value: '73°F' }] }
+    );
+    studCounter++;
   }
 
   // Top plates
-  const topPlates = [
-    { pos: [0, wallHeight, -floorDepth/2], size: [floorWidth, beamSize, beamSize] },
-    { pos: [0, wallHeight, floorDepth/2], size: [floorWidth, beamSize, beamSize] },
-    { pos: [-floorWidth/2, wallHeight, 0], size: [beamSize, beamSize, floorDepth] },
-    { pos: [floorWidth/2, wallHeight, 0], size: [beamSize, beamSize, floorDepth] },
-  ];
-
-  topPlates.forEach(beam => {
-    const geometry = createBeam(...beam.size);
-    const mesh = new THREE.Mesh(geometry, steelMaterial);
-    mesh.position.set(...beam.pos);
-    group.add(mesh);
-  });
+  let plateCounter = 1;
+  addComponent(
+    createBeam(floorWidth, beamSize, beamSize),
+    [0, wallHeight, -floorDepth/2],
+    'Top Plate',
+    `TP-${plateCounter++}`,
+    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.42 kN' }, { label: 'Temp', value: '71°F' }] }
+  );
+  addComponent(
+    createBeam(floorWidth, beamSize, beamSize),
+    [0, wallHeight, floorDepth/2],
+    'Top Plate',
+    `TP-${plateCounter++}`,
+    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.38 kN' }, { label: 'Temp', value: '72°F' }] }
+  );
+  addComponent(
+    createBeam(beamSize, beamSize, floorDepth),
+    [-floorWidth/2, wallHeight, 0],
+    'Top Plate',
+    `TP-${plateCounter++}`,
+    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.44 kN' }, { label: 'Temp', value: '70°F' }] }
+  );
+  addComponent(
+    createBeam(beamSize, beamSize, floorDepth),
+    [floorWidth/2, wallHeight, 0],
+    'Top Plate',
+    `TP-${plateCounter++}`,
+    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.39 kN' }, { label: 'Temp', value: '73°F' }] }
+  );
 
   // Roof rafters (gable style)
   const roofPeak = 2;
-  const roofRafterMaterial = steelMaterial.clone();
+  let rafterCounter = 1;
   
   for (let x = -floorWidth/2; x <= floorWidth/2; x += studSpacing * 1.5) {
+    const rafterLength = Math.sqrt(roofPeak*roofPeak + (floorDepth/2)*(floorDepth/2));
+    
     // Left slope
-    const leftRafter = new THREE.Mesh(
-      createBeam(beamSize, Math.sqrt(roofPeak*roofPeak + (floorDepth/2)*(floorDepth/2)), beamSize),
-      roofRafterMaterial
+    const leftRafter = addComponent(
+      createBeam(beamSize, rafterLength, beamSize),
+      [x, wallHeight + roofPeak/2, -floorDepth/4],
+      'Roof Rafter',
+      `RR-L${rafterCounter}`,
+      { dimensions: `0.08m x ${rafterLength.toFixed(2)}m x 0.08m`, weight: '18.3 kg', loadRating: '500 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-08', installDate: '2024-06-20', readings: [{ label: 'Stress', value: '0.15 kN' }, { label: 'Temp', value: '69°F' }] }
     );
-    leftRafter.position.set(x, wallHeight + roofPeak/2, -floorDepth/4);
     leftRafter.rotation.x = Math.atan2(roofPeak, floorDepth/2);
-    group.add(leftRafter);
 
     // Right slope
-    const rightRafter = new THREE.Mesh(
-      createBeam(beamSize, Math.sqrt(roofPeak*roofPeak + (floorDepth/2)*(floorDepth/2)), beamSize),
-      roofRafterMaterial
+    const rightRafter = addComponent(
+      createBeam(beamSize, rafterLength, beamSize),
+      [x, wallHeight + roofPeak/2, floorDepth/4],
+      'Roof Rafter',
+      `RR-R${rafterCounter}`,
+      { dimensions: `0.08m x ${rafterLength.toFixed(2)}m x 0.08m`, weight: '18.3 kg', loadRating: '500 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-08', installDate: '2024-06-20', readings: [{ label: 'Stress', value: '0.13 kN' }, { label: 'Temp', value: '70°F' }] }
     );
-    rightRafter.position.set(x, wallHeight + roofPeak/2, floorDepth/4);
     rightRafter.rotation.x = -Math.atan2(roofPeak, floorDepth/2);
-    group.add(rightRafter);
+    rafterCounter++;
   }
 
   // Ridge beam
-  const ridge = new THREE.Mesh(createBeam(floorWidth, beamSize, beamSize), steelMaterial);
-  ridge.position.set(0, wallHeight + roofPeak, 0);
-  group.add(ridge);
+  addComponent(
+    createBeam(floorWidth, beamSize, beamSize),
+    [0, wallHeight + roofPeak, 0],
+    'Ridge Beam',
+    'RB-001',
+    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '900 kN', status: 'Good', sensors: 3, lastInspection: '2024-12-15', installDate: '2024-06-22', readings: [{ label: 'Stress', value: '0.52 kN' }, { label: 'Temp', value: '68°F' }] }
+  );
 
   // Interior walls (partial)
+  let interiorCounter = 1;
   for (let z = -floorDepth/4; z <= floorDepth/4; z += studSpacing) {
-    const interiorStud = new THREE.Mesh(createBeam(beamSize, wallHeight * 0.9, beamSize), steelMaterial);
-    interiorStud.position.set(-2, wallHeight * 0.45, z);
-    group.add(interiorStud);
+    addComponent(
+      createBeam(beamSize, wallHeight * 0.9, beamSize),
+      [-2, wallHeight * 0.45, z],
+      'Interior Stud',
+      `IS-${interiorCounter++}`,
+      { dimensions: '0.08m x 3.6m x 0.08m', weight: '11.2 kg', loadRating: '550 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-10', installDate: '2024-06-18', readings: [{ label: 'Stress', value: '0.14 kN' }, { label: 'Temp', value: '72°F' }] }
+    );
   }
 
+  group.userData.components = components;
   return group;
 }
 
@@ -169,6 +267,14 @@ export default function DigitalTwinViewer({ alerts }) {
   const [markerPositions, setMarkerPositions] = useState([]);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [webglError, setWebglError] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [hoveredComponent, setHoveredComponent] = useState(null);
+  const [isRotating, setIsRotating] = useState(true);
+  
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const isDraggingRef = useRef(false);
+  const previousMouseRef = useRef({ x: 0, y: 0 });
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -270,16 +376,145 @@ export default function DigitalTwinViewer({ alerts }) {
     const sky = new THREE.Mesh(skyGeometry, skyMaterial);
     scene.add(sky);
 
+    // Mouse interaction handlers
+    const onMouseMove = (event) => {
+      const rect = container.getBoundingClientRect();
+      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      // Manual camera rotation
+      if (isDraggingRef.current && !isRotating) {
+        const deltaX = event.clientX - previousMouseRef.current.x;
+        const deltaY = event.clientY - previousMouseRef.current.y;
+        
+        const rotationSpeed = 0.005;
+        
+        // Rotate camera around center
+        const radius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+        let angle = Math.atan2(camera.position.z, camera.position.x);
+        angle -= deltaX * rotationSpeed;
+        
+        camera.position.x = radius * Math.cos(angle);
+        camera.position.z = radius * Math.sin(angle);
+        
+        // Adjust height
+        camera.position.y = Math.max(2, Math.min(20, camera.position.y - deltaY * 0.05));
+        
+        camera.lookAt(0, 2, 0);
+      }
+      
+      previousMouseRef.current = { x: event.clientX, y: event.clientY };
+      
+      // Raycasting for hover effect
+      if (!isDraggingRef.current) {
+        raycasterRef.current.setFromCamera(mouseRef.current, camera);
+        const components = steelFrame.userData.components || [];
+        const intersects = raycasterRef.current.intersectObjects(components, false);
+        
+        if (intersects.length > 0) {
+          const intersected = intersects[0].object;
+          if (intersected.userData.selectable) {
+            container.style.cursor = 'pointer';
+            setHoveredComponent(intersected);
+            
+            // Highlight hovered component
+            if (intersected !== selectedComponentRef.current) {
+              intersected.material.emissive.setHex(0x555555);
+            }
+          }
+        } else {
+          container.style.cursor = 'grab';
+          if (hoveredComponentRef.current && hoveredComponentRef.current !== selectedComponentRef.current) {
+            hoveredComponentRef.current.material.emissive.setHex(0x000000);
+          }
+          setHoveredComponent(null);
+        }
+      }
+    };
+    
+    const onMouseDown = (event) => {
+      isDraggingRef.current = true;
+      previousMouseRef.current = { x: event.clientX, y: event.clientY };
+      container.style.cursor = 'grabbing';
+      setIsRotating(false);
+    };
+    
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      container.style.cursor = 'grab';
+    };
+    
+    const onClick = (event) => {
+      if (Math.abs(event.clientX - previousMouseRef.current.x) > 5 || 
+          Math.abs(event.clientY - previousMouseRef.current.y) > 5) {
+        return; // Was dragging
+      }
+      
+      const rect = container.getBoundingClientRect();
+      const mouse = {
+        x: ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        y: -((event.clientY - rect.top) / rect.height) * 2 + 1
+      };
+      
+      raycasterRef.current.setFromCamera(mouse, camera);
+      const components = steelFrame.userData.components || [];
+      const intersects = raycasterRef.current.intersectObjects(components, false);
+      
+      if (intersects.length > 0) {
+        const intersected = intersects[0].object;
+        if (intersected.userData.selectable) {
+          // Deselect previous
+          if (selectedComponentRef.current && selectedComponentRef.current !== intersected) {
+            selectedComponentRef.current.material.emissive.setHex(0x000000);
+          }
+          
+          // Select new
+          selectedComponentRef.current = intersected;
+          intersected.material.emissive.setHex(0x4488ff);
+          setSelectedComponent(intersected.userData);
+          setSelectedAlert(null);
+        }
+      }
+    };
+    
+    const onWheel = (event) => {
+      event.preventDefault();
+      const zoomSpeed = 0.1;
+      const delta = event.deltaY * zoomSpeed;
+      
+      const factor = delta > 0 ? 1.1 : 0.9;
+      camera.position.multiplyScalar(factor);
+      
+      // Clamp distance
+      const distance = camera.position.length();
+      if (distance < 8) camera.position.normalize().multiplyScalar(8);
+      if (distance > 30) camera.position.normalize().multiplyScalar(30);
+    };
+    
+    container.addEventListener('mousemove', onMouseMove);
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('click', onClick);
+    container.addEventListener('wheel', onWheel, { passive: false });
+    
+    const selectedComponentRef = { current: null };
+    const hoveredComponentRef = { current: null };
+
     // Animation
     let angle = 0;
     const animate = () => {
       requestAnimationFrame(animate);
       
-      // Slow rotation
-      angle += 0.001;
-      camera.position.x = 18 * Math.cos(angle);
-      camera.position.z = 18 * Math.sin(angle);
-      camera.lookAt(0, 2, 0);
+      // Auto rotation when enabled
+      if (isRotating) {
+        angle += 0.001;
+        camera.position.x = 18 * Math.cos(angle);
+        camera.position.z = 18 * Math.sin(angle);
+        camera.lookAt(0, 2, 0);
+      }
+      
+      // Update hovered component reference
+      hoveredComponentRef.current = hoveredComponent;
       
       renderer.render(scene, camera);
       
@@ -301,12 +536,18 @@ export default function DigitalTwinViewer({ alerts }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      container.removeEventListener('mousemove', onMouseMove);
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('click', onClick);
+      container.removeEventListener('wheel', onWheel);
+      
       if (renderer && container.contains(renderer.domElement)) {
         renderer.dispose();
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [isRotating, hoveredComponent]);
 
   // Update 2D positions for 3D alert markers
   const updateMarkerPositions = () => {
@@ -350,7 +591,14 @@ export default function DigitalTwinViewer({ alerts }) {
       camera.position.multiplyScalar(1.1);
     } else if (direction === 'reset') {
       camera.position.set(15, 10, 15);
+      setIsRotating(true);
+      setSelectedComponent(null);
     }
+    
+    // Clamp distance
+    const distance = camera.position.length();
+    if (distance < 8) camera.position.normalize().multiplyScalar(8);
+    if (distance > 30) camera.position.normalize().multiplyScalar(30);
   };
 
   return (
@@ -386,8 +634,7 @@ export default function DigitalTwinViewer({ alerts }) {
       {/* 3D Canvas Container */}
       <div 
         ref={containerRef} 
-        className="absolute inset-0"
-        onClick={() => setSelectedAlert(null)}
+        className="absolute inset-0 cursor-grab"
       />
       
       {/* Alert Markers Overlay */}
@@ -426,6 +673,29 @@ export default function DigitalTwinViewer({ alerts }) {
         onViewChange={setActiveView}
         onZoom={handleZoom}
       />
+      
+      {/* Component Properties Panel */}
+      {selectedComponent && (
+        <ComponentPropertiesPanel
+          component={selectedComponent}
+          onClose={() => {
+            setSelectedComponent(null);
+            if (selectedComponentRef?.current) {
+              selectedComponentRef.current.material.emissive.setHex(0x000000);
+            }
+          }}
+        />
+      )}
+      
+      {/* Instructions */}
+      {!selectedComponent && !selectedAlert && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-sm rounded-lg px-4 py-2 border border-slate-600/50 pointer-events-none">
+          <p className="text-slate-300 text-sm flex items-center gap-2">
+            <span className="text-blue-400">💡</span>
+            Drag to rotate • Scroll to zoom • Click components or alerts for details
+          </p>
+        </div>
+      )}
     </div>
   );
 }
