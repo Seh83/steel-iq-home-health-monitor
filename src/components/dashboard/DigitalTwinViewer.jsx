@@ -7,20 +7,25 @@ import ComponentPropertiesPanel from './ComponentPropertiesPanel';
 import PanelDetailView from '../panels/PanelDetailView';
 import SensorActionModal from '../sensors/SensorActionModal';
 
-// Steel frame building generator
-function createSteelFrame() {
+// Warehouse building generator
+function createWarehouse() {
   const group = new THREE.Group();
   const components = []; // Track all components for interaction
   
   const steelMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x4a5568,
-    metalness: 0.8,
-    roughness: 0.3,
-    transparent: true,
-    opacity: 0.9
+    color: 0x556677,
+    metalness: 0.9,
+    roughness: 0.2
+  });
+  
+  const panelMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd4d8dd,
+    metalness: 0.3,
+    roughness: 0.7,
+    side: THREE.DoubleSide
   });
 
-  // Helper to create a steel beam with metadata
+  // Helper to create structural elements
   const createBeam = (width, height, depth) => {
     return new THREE.BoxGeometry(width, height, depth);
   };
@@ -45,277 +50,173 @@ function createSteelFrame() {
     return mesh;
   };
 
-  // Floor dimensions
-  const floorWidth = 12;
-  const floorDepth = 8;
-  const wallHeight = 4;
-  const studSpacing = 1.2;
-  const beamSize = 0.08;
+  // Warehouse dimensions
+  const warehouseWidth = 20;
+  const warehouseDepth = 15;
+  const wallHeight = 6;
+  const columnSpacing = 5;
+  const beamSize = 0.15;
 
-  // Create floor frame
+  // Create warehouse structure
   let componentCounter = 1;
   
-  // Main floor beams
-  addComponent(
-    createBeam(floorWidth, beamSize, beamSize),
-    [0, 0, -floorDepth/2],
-    'Floor Beam',
-    `FB-${componentCounter++}`,
-    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.32 kN' }, { label: 'Temp', value: '72°F' }] }
-  );
-  addComponent(
-    createBeam(floorWidth, beamSize, beamSize),
-    [0, 0, floorDepth/2],
-    'Floor Beam',
-    `FB-${componentCounter++}`,
-    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.28 kN' }, { label: 'Temp', value: '71°F' }] }
-  );
-  addComponent(
-    createBeam(beamSize, beamSize, floorDepth),
-    [-floorWidth/2, 0, 0],
-    'Floor Beam',
-    `FB-${componentCounter++}`,
-    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.35 kN' }, { label: 'Temp', value: '70°F' }] }
-  );
-  addComponent(
-    createBeam(beamSize, beamSize, floorDepth),
-    [floorWidth/2, 0, 0],
-    'Floor Beam',
-    `FB-${componentCounter++}`,
-    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1200 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-01', readings: [{ label: 'Stress', value: '0.29 kN' }, { label: 'Temp', value: '73°F' }] }
-  );
-
-  // Floor joists
-  let joistCounter = 1;
-  for (let x = -floorWidth/2 + studSpacing; x < floorWidth/2; x += studSpacing) {
-    addComponent(
-      createBeam(beamSize, beamSize, floorDepth),
-      [x, 0, 0],
-      'Floor Joist',
-      `FJ-${joistCounter++}`,
-      { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '800 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-10', installDate: '2024-06-05', readings: [{ label: 'Stress', value: '0.21 kN' }, { label: 'Temp', value: '72°F' }] }
-    );
+  // Steel columns (corner and intermediate)
+  let columnCounter = 1;
+  for (let x = -warehouseWidth/2; x <= warehouseWidth/2; x += columnSpacing) {
+    for (let z = -warehouseDepth/2; z <= warehouseDepth/2; z += columnSpacing) {
+      addComponent(
+        createBeam(beamSize, wallHeight, beamSize),
+        [x, wallHeight/2, z],
+        'Structural Column',
+        `COL-${columnCounter++}`,
+        { dimensions: `${beamSize.toFixed(2)}m x ${wallHeight}m x ${beamSize.toFixed(2)}m`, weight: '285 kg', loadRating: '2500 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-03-10', readings: [{ label: 'Load', value: '1.24 kN' }, { label: 'Temp', value: '68°F' }] }
+      );
+    }
   }
-
-  // Wall studs - Front and Back
-  let studCounter = 1;
-  for (let x = -floorWidth/2; x <= floorWidth/2; x += studSpacing) {
-    // Front wall
-    addComponent(
-      createBeam(beamSize, wallHeight, beamSize),
-      [x, wallHeight/2, -floorDepth/2],
-      'Wall Stud',
-      `WS-F${studCounter}`,
-      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.18 kN' }, { label: 'Temp', value: '71°F' }] }
-    );
-
-    // Back wall
-    addComponent(
-      createBeam(beamSize, wallHeight, beamSize),
-      [x, wallHeight/2, floorDepth/2],
-      'Wall Stud',
-      `WS-B${studCounter}`,
-      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.16 kN' }, { label: 'Temp', value: '72°F' }] }
-    );
-    studCounter++;
-  }
-
-  // Wall studs - Left and Right
-  for (let z = -floorDepth/2 + studSpacing; z < floorDepth/2; z += studSpacing) {
-    // Left wall
-    addComponent(
-      createBeam(beamSize, wallHeight, beamSize),
-      [-floorWidth/2, wallHeight/2, z],
-      'Wall Stud',
-      `WS-L${studCounter}`,
-      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.19 kN' }, { label: 'Temp', value: '70°F' }] }
-    );
-
-    // Right wall
-    addComponent(
-      createBeam(beamSize, wallHeight, beamSize),
-      [floorWidth/2, wallHeight/2, z],
-      'Wall Stud',
-      `WS-R${studCounter}`,
-      { dimensions: '0.08m x 4.0m x 0.08m', weight: '12.5 kg', loadRating: '600 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-12', installDate: '2024-06-10', readings: [{ label: 'Stress', value: '0.17 kN' }, { label: 'Temp', value: '73°F' }] }
-    );
-    studCounter++;
-  }
-
-  // Top plates
-  let plateCounter = 1;
-  addComponent(
-    createBeam(floorWidth, beamSize, beamSize),
-    [0, wallHeight, -floorDepth/2],
-    'Top Plate',
-    `TP-${plateCounter++}`,
-    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.42 kN' }, { label: 'Temp', value: '71°F' }] }
-  );
-  addComponent(
-    createBeam(floorWidth, beamSize, beamSize),
-    [0, wallHeight, floorDepth/2],
-    'Top Plate',
-    `TP-${plateCounter++}`,
-    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.38 kN' }, { label: 'Temp', value: '72°F' }] }
-  );
-  addComponent(
-    createBeam(beamSize, beamSize, floorDepth),
-    [-floorWidth/2, wallHeight, 0],
-    'Top Plate',
-    `TP-${plateCounter++}`,
-    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.44 kN' }, { label: 'Temp', value: '70°F' }] }
-  );
-  addComponent(
-    createBeam(beamSize, beamSize, floorDepth),
-    [floorWidth/2, wallHeight, 0],
-    'Top Plate',
-    `TP-${plateCounter++}`,
-    { dimensions: '8.0m x 0.08m x 0.08m', weight: '30.1 kg', loadRating: '1000 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-06-15', readings: [{ label: 'Stress', value: '0.39 kN' }, { label: 'Temp', value: '73°F' }] }
-  );
-
-  // Roof rafters (gable style)
-  const roofPeak = 2;
-  let rafterCounter = 1;
   
-  for (let x = -floorWidth/2; x <= floorWidth/2; x += studSpacing * 1.5) {
-    const rafterLength = Math.sqrt(roofPeak*roofPeak + (floorDepth/2)*(floorDepth/2));
-    
-    // Left slope
-    const leftRafter = addComponent(
-      createBeam(beamSize, rafterLength, beamSize),
-      [x, wallHeight + roofPeak/2, -floorDepth/4],
-      'Roof Rafter',
-      `RR-L${rafterCounter}`,
-      { dimensions: `0.08m x ${rafterLength.toFixed(2)}m x 0.08m`, weight: '18.3 kg', loadRating: '500 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-08', installDate: '2024-06-20', readings: [{ label: 'Stress', value: '0.15 kN' }, { label: 'Temp', value: '69°F' }] }
-    );
-    leftRafter.rotation.x = Math.atan2(roofPeak, floorDepth/2);
-
-    // Right slope
-    const rightRafter = addComponent(
-      createBeam(beamSize, rafterLength, beamSize),
-      [x, wallHeight + roofPeak/2, floorDepth/4],
-      'Roof Rafter',
-      `RR-R${rafterCounter}`,
-      { dimensions: `0.08m x ${rafterLength.toFixed(2)}m x 0.08m`, weight: '18.3 kg', loadRating: '500 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-08', installDate: '2024-06-20', readings: [{ label: 'Stress', value: '0.13 kN' }, { label: 'Temp', value: '70°F' }] }
-    );
-    rightRafter.rotation.x = -Math.atan2(roofPeak, floorDepth/2);
-    rafterCounter++;
-  }
-
-  // Ridge beam
-  addComponent(
-    createBeam(floorWidth, beamSize, beamSize),
-    [0, wallHeight + roofPeak, 0],
-    'Ridge Beam',
-    'RB-001',
-    { dimensions: '12.0m x 0.08m x 0.08m', weight: '45.2 kg', loadRating: '900 kN', status: 'Good', sensors: 3, lastInspection: '2024-12-15', installDate: '2024-06-22', readings: [{ label: 'Stress', value: '0.52 kN' }, { label: 'Temp', value: '68°F' }] }
-  );
-
-  // Interior walls (partial)
-  let interiorCounter = 1;
-  for (let z = -floorDepth/4; z <= floorDepth/4; z += studSpacing) {
+  // Perimeter beams (top)
+  let beamCounter = 1;
+  // Front and back horizontal beams
+  for (let x = -warehouseWidth/2; x < warehouseWidth/2; x += columnSpacing) {
     addComponent(
-      createBeam(beamSize, wallHeight * 0.9, beamSize),
-      [-2, wallHeight * 0.45, z],
-      'Interior Stud',
-      `IS-${interiorCounter++}`,
-      { dimensions: '0.08m x 3.6m x 0.08m', weight: '11.2 kg', loadRating: '550 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-10', installDate: '2024-06-18', readings: [{ label: 'Stress', value: '0.14 kN' }, { label: 'Temp', value: '72°F' }] }
+      createBeam(columnSpacing, beamSize, beamSize),
+      [x + columnSpacing/2, wallHeight, -warehouseDepth/2],
+      'Perimeter Beam',
+      `PB-F${beamCounter}`,
+      { dimensions: `${columnSpacing}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.85 kN' }, { label: 'Temp', value: '69°F' }] }
+    );
+    addComponent(
+      createBeam(columnSpacing, beamSize, beamSize),
+      [x + columnSpacing/2, wallHeight, warehouseDepth/2],
+      'Perimeter Beam',
+      `PB-B${beamCounter++}`,
+      { dimensions: `${columnSpacing}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.82 kN' }, { label: 'Temp', value: '70°F' }] }
+    );
+  }
+  
+  // Left and right horizontal beams
+  for (let z = -warehouseDepth/2; z < warehouseDepth/2; z += columnSpacing) {
+    addComponent(
+      createBeam(beamSize, beamSize, columnSpacing),
+      [-warehouseWidth/2, wallHeight, z + columnSpacing/2],
+      'Perimeter Beam',
+      `PB-L${beamCounter}`,
+      { dimensions: `${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m x ${columnSpacing}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.88 kN' }, { label: 'Temp', value: '68°F' }] }
+    );
+    addComponent(
+      createBeam(beamSize, beamSize, columnSpacing),
+      [warehouseWidth/2, wallHeight, z + columnSpacing/2],
+      'Perimeter Beam',
+      `PB-R${beamCounter++}`,
+      { dimensions: `${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m x ${columnSpacing}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.79 kN' }, { label: 'Temp', value: '71°F' }] }
+    );
+  }
+  
+  // Internal support beams
+  let internalBeamCounter = 1;
+  for (let z = -warehouseDepth/2 + columnSpacing; z < warehouseDepth/2; z += columnSpacing) {
+    for (let x = -warehouseWidth/2; x < warehouseWidth/2; x += columnSpacing) {
+      addComponent(
+        createBeam(columnSpacing, beamSize, beamSize),
+        [x + columnSpacing/2, wallHeight, z],
+        'Support Beam',
+        `SB-${internalBeamCounter++}`,
+        { dimensions: `${columnSpacing}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '180 kg', loadRating: '1500 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-08', installDate: '2024-03-14', readings: [{ label: 'Stress', value: '0.65 kN' }, { label: 'Temp', value: '70°F' }] }
+      );
+    }
+  }
+  
+  // Roof trusses
+  const roofHeight = 2.5;
+  let trussCounter = 1;
+  for (let z = -warehouseDepth/2; z <= warehouseDepth/2; z += columnSpacing) {
+    // Main truss beam
+    addComponent(
+      createBeam(warehouseWidth, beamSize, beamSize),
+      [0, wallHeight + roofHeight/2, z],
+      'Roof Truss',
+      `RT-${trussCounter++}`,
+      { dimensions: `${warehouseWidth}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '320 kg', loadRating: '2200 kN', status: 'Good', sensors: 3, lastInspection: '2024-12-05', installDate: '2024-03-18', readings: [{ label: 'Stress', value: '0.92 kN' }, { label: 'Temp', value: '66°F' }] }
     );
   }
 
-  // Add actual panel surfaces
-  const panelMaterial = new THREE.MeshStandardMaterial({
-    color: 0x8b9dc3,
-    transparent: true,
-    opacity: 0.3,
-    side: THREE.DoubleSide,
-    metalness: 0.2,
-    roughness: 0.8
+  // Warehouse wall and roof panels
+  const corrugatedPanelMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe8eaed,
+    metalness: 0.6,
+    roughness: 0.4,
+    side: THREE.DoubleSide
   });
-
-  // Floor panel
-  const floorPanel = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorWidth, floorDepth),
-    panelMaterial.clone()
+  
+  // Concrete floor
+  const floorGeometry = new THREE.BoxGeometry(warehouseWidth, 0.2, warehouseDepth);
+  const floorMat = new THREE.MeshStandardMaterial({ 
+    color: 0x888888,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  const floor = new THREE.Mesh(floorGeometry, floorMat);
+  floor.position.y = -0.1;
+  group.add(floor);
+  
+  // Front wall panels (with large door opening)
+  const doorWidth = 6;
+  const doorHeight = 5;
+  const frontLeftPanel = new THREE.Mesh(
+    new THREE.PlaneGeometry((warehouseWidth - doorWidth)/2, wallHeight),
+    corrugatedPanelMaterial.clone()
   );
-  floorPanel.rotation.x = -Math.PI / 2;
-  floorPanel.position.y = 0.05;
-  group.add(floorPanel);
-
-  // Wall panels
-  // Front wall
-  const frontWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorWidth, wallHeight),
-    panelMaterial.clone()
+  frontLeftPanel.position.set(-warehouseWidth/4 - doorWidth/4, wallHeight/2, -warehouseDepth/2);
+  group.add(frontLeftPanel);
+  
+  const frontRightPanel = new THREE.Mesh(
+    new THREE.PlaneGeometry((warehouseWidth - doorWidth)/2, wallHeight),
+    corrugatedPanelMaterial.clone()
   );
-  frontWall.position.set(0, wallHeight/2, -floorDepth/2);
-  group.add(frontWall);
-
-  // Back wall
+  frontRightPanel.position.set(warehouseWidth/4 + doorWidth/4, wallHeight/2, -warehouseDepth/2);
+  group.add(frontRightPanel);
+  
+  const frontTopPanel = new THREE.Mesh(
+    new THREE.PlaneGeometry(doorWidth, wallHeight - doorHeight),
+    corrugatedPanelMaterial.clone()
+  );
+  frontTopPanel.position.set(0, wallHeight - (wallHeight - doorHeight)/2, -warehouseDepth/2);
+  group.add(frontTopPanel);
+  
+  // Back wall panel
   const backWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorWidth, wallHeight),
-    panelMaterial.clone()
+    new THREE.PlaneGeometry(warehouseWidth, wallHeight),
+    corrugatedPanelMaterial.clone()
   );
-  backWall.position.set(0, wallHeight/2, floorDepth/2);
+  backWall.position.set(0, wallHeight/2, warehouseDepth/2);
   backWall.rotation.y = Math.PI;
   group.add(backWall);
-
-  // Left wall
+  
+  // Side walls
   const leftWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorDepth, wallHeight),
-    panelMaterial.clone()
+    new THREE.PlaneGeometry(warehouseDepth, wallHeight),
+    corrugatedPanelMaterial.clone()
   );
-  leftWall.position.set(-floorWidth/2, wallHeight/2, 0);
+  leftWall.position.set(-warehouseWidth/2, wallHeight/2, 0);
   leftWall.rotation.y = Math.PI / 2;
   group.add(leftWall);
-
-  // Right wall
+  
   const rightWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorDepth, wallHeight),
-    panelMaterial.clone()
+    new THREE.PlaneGeometry(warehouseDepth, wallHeight),
+    corrugatedPanelMaterial.clone()
   );
-  rightWall.position.set(floorWidth/2, wallHeight/2, 0);
+  rightWall.position.set(warehouseWidth/2, wallHeight/2, 0);
   rightWall.rotation.y = -Math.PI / 2;
   group.add(rightWall);
-
-  // Ceiling panel
-  const ceilingPanel = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorWidth, floorDepth),
-    panelMaterial.clone()
-  );
-  ceilingPanel.rotation.x = Math.PI / 2;
-  ceilingPanel.position.y = wallHeight;
-  group.add(ceilingPanel);
-
-  // Roof panels (gable)
-  const roofLength = Math.sqrt(roofPeak*roofPeak + (floorDepth/2)*(floorDepth/2));
   
-  // Left roof slope
-  const leftRoof = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorWidth, roofLength),
-    panelMaterial.clone()
+  // Flat roof panels
+  const roofPanel = new THREE.Mesh(
+    new THREE.PlaneGeometry(warehouseWidth, warehouseDepth),
+    corrugatedPanelMaterial.clone()
   );
-  leftRoof.position.set(0, wallHeight + roofPeak/2, -floorDepth/4);
-  leftRoof.rotation.x = -Math.atan2(roofPeak, floorDepth/2);
-  group.add(leftRoof);
-
-  // Right roof slope
-  const rightRoof = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorWidth, roofLength),
-    panelMaterial.clone()
-  );
-  rightRoof.position.set(0, wallHeight + roofPeak/2, floorDepth/4);
-  rightRoof.rotation.x = Math.atan2(roofPeak, floorDepth/2);
-  group.add(rightRoof);
-
-  // Interior wall panel
-  const interiorWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(floorDepth/2, wallHeight * 0.9),
-    panelMaterial.clone()
-  );
-  interiorWall.position.set(-2, wallHeight * 0.45, 0);
-  interiorWall.rotation.y = Math.PI / 2;
-  group.add(interiorWall);
+  roofPanel.position.y = wallHeight + roofHeight;
+  roofPanel.rotation.x = Math.PI / 2;
+  group.add(roofPanel);
 
   group.userData.components = components;
   return group;
@@ -444,11 +345,11 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Steel frame
-    const steelFrame = createSteelFrame();
-    steelFrame.position.y = 0.1;
-    scene.add(steelFrame);
-    frameRef.current = steelFrame;
+    // Warehouse structure
+    const warehouse = createWarehouse();
+    warehouse.position.y = 0.1;
+    scene.add(warehouse);
+    frameRef.current = warehouse;
 
     // Add panel markers
     panels.forEach(panel => {
@@ -588,7 +489,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       // Raycasting for hover effect
       if (!isDraggingRef.current) {
         raycasterRef.current.setFromCamera(mouseRef.current, camera);
-        const components = steelFrame.userData.components || [];
+        const components = warehouse.userData.components || [];
         const intersects = raycasterRef.current.intersectObjects(components, false);
         
         if (intersects.length > 0) {
@@ -663,7 +564,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       }
       
       // Then check components
-      const components = steelFrame.userData.components || [];
+      const components = warehouse.userData.components || [];
       const intersects = raycasterRef.current.intersectObjects(components, false);
       
       if (intersects.length > 0) {
