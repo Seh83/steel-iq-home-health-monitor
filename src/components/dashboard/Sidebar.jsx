@@ -1,11 +1,13 @@
 import React from 'react';
-import { LayoutDashboard, Bell, Box, Settings } from 'lucide-react';
+import { LayoutDashboard, Activity, Box, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 const navItems = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', active: true },
-  { id: 'alerts', icon: Bell, label: 'Alerts' },
-  { id: 'twin', icon: Box, label: 'Digital Twin' },
-  { id: 'settings', icon: Settings, label: 'Settings' }
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', page: 'Dashboard', active: true },
+  { id: 'sensors', icon: Activity, label: 'Sensors', page: 'Sensors' },
+  { id: 'twin', icon: Box, label: 'Digital Twin', page: 'Dashboard' },
+  { id: 'settings', icon: Settings, label: 'Settings', page: 'Dashboard' }
 ];
 
 export default function Sidebar() {
@@ -20,18 +22,20 @@ export default function Sidebar() {
       <nav className="flex-1 flex flex-col gap-2">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const isActive = window.location.pathname.includes(item.page);
           return (
-            <button
+            <Link
               key={item.id}
+              to={createPageUrl(item.page)}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                item.active 
+                isActive
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
               title={item.label}
             >
               <Icon className="w-5 h-5" />
-            </button>
+            </Link>
           );
         })}
       </nav>

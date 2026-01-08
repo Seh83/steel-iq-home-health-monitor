@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import AlertTooltip from './AlertTooltip';
 import ViewControls from './ViewControls';
 import ComponentPropertiesPanel from './ComponentPropertiesPanel';
+import PanelDetailView from '../panels/PanelDetailView';
+import SensorActionModal from '../sensors/SensorActionModal';
 
 // Steel frame building generator
 function createSteelFrame() {
@@ -255,7 +257,7 @@ function AlertMarker({ position, type, isActive, onClick }) {
   );
 }
 
-export default function DigitalTwinViewer({ alerts }) {
+export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const sceneRef = useRef(null);
@@ -270,11 +272,16 @@ export default function DigitalTwinViewer({ alerts }) {
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [hoveredComponent, setHoveredComponent] = useState(null);
   const [isRotating, setIsRotating] = useState(true);
+  const [selectedPanel, setSelectedPanel] = useState(null);
+  const [selectedSensor, setSelectedSensor] = useState(null);
+  const [pingingPanelId, setPingingPanelId] = useState(null);
   
   const mouseRef = useRef({ x: 0, y: 0 });
   const raycasterRef = useRef(new THREE.Raycaster());
   const isDraggingRef = useRef(false);
   const previousMouseRef = useRef({ x: 0, y: 0 });
+  const panelMarkersRef = useRef([]);
+  const sensorMarkersRef = useRef([]);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -346,6 +353,83 @@ export default function DigitalTwinViewer({ alerts }) {
     steelFrame.position.y = 0.1;
     scene.add(steelFrame);
     frameRef.current = steelFrame;
+
+    // Add panel markers
+    panels.forEach(panel => {
+      const panelGroup = new THREE.Group();
+      panelGroup.userData = { 
+        type: 'panel', 
+        panelData: panel,
+        selectable: true 
+      };
+      
+      // Panel indicator
+      const indicatorGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+      const statusColors = {
+        good: 0x10b981,
+        warning: 0xf59e0b,
+        critical: 0xef4444,
+        offline: 0x64748b
+      };
+      const indicatorMaterial = new THREE.MeshStandardMaterial({
+        color: statusColors[panel.status] || 0x64748b,
+        emissive: statusColors[panel.status] || 0x64748b,
+        emissiveIntensity: 0.5,
+        metalness: 0.3,
+        roughness: 0.4
+      });
+      
+      const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+      panelGroup.add(indicator);
+      
+      // Pulsing ring
+      const ringGeometry = new THREE.RingGeometry(0.2, 0.25, 32);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: statusColors[panel.status] || 0x64748b,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.rotation.x = -Math.PI / 2;
+      panelGroup.add(ring);
+      
+      panelGroup.position.set(panel.position.x, panel.position.y, panel.position.z);
+      scene.add(panelGroup);
+      panelMarkersRef.current.push({ group: panelGroup, panel, ring });
+    });
+
+    // Add sensor markers
+    sensors.forEach(sensor => {
+      const sensorGroup = new THREE.Group();
+      sensorGroup.userData = { 
+        type: 'sensor', 
+        sensorData: sensor,
+        selectable: true 
+      };
+      
+      const sensorGeometry = new THREE.SphereGeometry(0.08, 12, 12);
+      const statusColors = {
+        online: 0x10b981,
+        warning: 0xf59e0b,
+        critical: 0xef4444,
+        offline: 0x64748b
+      };
+      const sensorMaterial = new THREE.MeshStandardMaterial({
+        color: statusColors[sensor.status] || 0x10b981,
+        emissive: statusColors[sensor.status] || 0x10b981,
+        emissiveIntensity: 0.8,
+        metalness: 0.5,
+        roughness: 0.3
+      });
+      
+      const sensorMesh = new THREE.Mesh(sensorGeometry, sensorMaterial);
+      sensorGroup.add(sensorMesh);
+      
+      sensorGroup.position.set(sensor.position.x, sensor.position.y, sensor.position.z);
+      scene.add(sensorGroup);
+      sensorMarkersRef.current.push({ group: sensorGroup, sensor, mesh: sensorMesh });
+    });
 
     // Sky gradient
     const skyGeometry = new THREE.SphereGeometry(30, 32, 32);
@@ -457,6 +541,32 @@ export default function DigitalTwinViewer({ alerts }) {
       };
       
       raycasterRef.current.setFromCamera(mouse, camera);
+      
+      // Check panels and sensors first
+      const allMarkers = [...panelMarkersRef.current.map(p => p.group), ...sensorMarkersRef.current.map(s => s.group)];
+      const markerIntersects = raycasterRef.current.intersectObjects(allMarkers, true);
+      
+      if (markerIntersects.length > 0) {
+        const intersected = markerIntersects[0].object.parent;
+        const userData = intersected.userData;
+        
+        if (userData.type === 'panel') {
+          const panelSensors = sensors.filter(s => s.panel_id === userData.panelData.panel_id);
+          setSelectedPanel(userData.panelData);
+          setSelectedComponent(null);
+          setSelectedAlert(null);
+          // Don't open modal here, just show selection
+        } else if (userData.type === 'sensor') {
+          const panel = panels.find(p => p.panel_id === userData.sensorData.panel_id);
+          setSelectedSensor(userData.sensorData);
+          setSelectedPanel(panel);
+          setSelectedComponent(null);
+          setSelectedAlert(null);
+        }
+        return;
+      }
+      
+      // Then check components
       const components = steelFrame.userData.components || [];
       const intersects = raycasterRef.current.intersectObjects(components, false);
       
@@ -473,6 +583,8 @@ export default function DigitalTwinViewer({ alerts }) {
           intersected.material.emissive.setHex(0x4488ff);
           setSelectedComponent(intersected.userData);
           setSelectedAlert(null);
+          setSelectedPanel(null);
+          setSelectedSensor(null);
         }
       }
     };
@@ -516,6 +628,28 @@ export default function DigitalTwinViewer({ alerts }) {
       // Update hovered component reference
       hoveredComponentRef.current = hoveredComponent;
       
+      // Animate panel rings
+      const time = Date.now() * 0.001;
+      panelMarkersRef.current.forEach(({ ring, panel }) => {
+        ring.scale.set(1 + Math.sin(time * 2) * 0.1, 1 + Math.sin(time * 2) * 0.1, 1);
+        ring.material.opacity = 0.3 + Math.sin(time * 3) * 0.1;
+      });
+      
+      // Pulse sensors
+      sensorMarkersRef.current.forEach(({ mesh }, idx) => {
+        mesh.scale.setScalar(1 + Math.sin(time * 3 + idx * 0.5) * 0.15);
+      });
+      
+      // Ping effect
+      if (pingingPanelId) {
+        const panelMarker = panelMarkersRef.current.find(p => p.panel.panel_id === pingingPanelId);
+        if (panelMarker) {
+          const pingTime = (Date.now() % 2000) / 2000; // 2 second cycle
+          panelMarker.ring.scale.setScalar(1 + pingTime * 3);
+          panelMarker.ring.material.opacity = 0.6 * (1 - pingTime);
+        }
+      }
+      
       renderer.render(scene, camera);
       
       // Update marker positions
@@ -547,7 +681,7 @@ export default function DigitalTwinViewer({ alerts }) {
         container.removeChild(renderer.domElement);
       }
     };
-  }, [isRotating, hoveredComponent]);
+  }, [isRotating, hoveredComponent, pingingPanelId, panels, sensors]);
 
   // Update 2D positions for 3D alert markers
   const updateMarkerPositions = () => {
@@ -687,12 +821,41 @@ export default function DigitalTwinViewer({ alerts }) {
         />
       )}
       
+      {/* Panel Detail View */}
+      {selectedPanel && !selectedSensor && (
+        <PanelDetailView
+          panel={selectedPanel}
+          sensors={sensors.filter(s => s.panel_id === selectedPanel.panel_id)}
+          onClose={() => {
+            setSelectedPanel(null);
+          }}
+          onSensorClick={(sensor) => {
+            setSelectedSensor(sensor);
+          }}
+        />
+      )}
+      
+      {/* Sensor Action Modal */}
+      {selectedSensor && (
+        <SensorActionModal
+          sensor={selectedSensor}
+          panel={selectedPanel}
+          onClose={() => {
+            setSelectedSensor(null);
+          }}
+          onPing={(sensor) => {
+            setPingingPanelId(sensor.panel_id);
+            setTimeout(() => setPingingPanelId(null), 2000);
+          }}
+        />
+      )}
+      
       {/* Instructions */}
-      {!selectedComponent && !selectedAlert && (
+      {!selectedComponent && !selectedAlert && !selectedPanel && !selectedSensor && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-sm rounded-lg px-4 py-2 border border-slate-600/50 pointer-events-none">
           <p className="text-slate-300 text-sm flex items-center gap-2">
             <span className="text-blue-400">💡</span>
-            Drag to rotate • Scroll to zoom • Click components or alerts for details
+            Drag to rotate • Scroll to zoom • Click panels/sensors for details
           </p>
         </div>
       )}
