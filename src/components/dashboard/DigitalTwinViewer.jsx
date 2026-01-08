@@ -223,6 +223,100 @@ function createSteelFrame() {
     );
   }
 
+  // Add actual panel surfaces
+  const panelMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b9dc3,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide,
+    metalness: 0.2,
+    roughness: 0.8
+  });
+
+  // Floor panel
+  const floorPanel = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorWidth, floorDepth),
+    panelMaterial.clone()
+  );
+  floorPanel.rotation.x = -Math.PI / 2;
+  floorPanel.position.y = 0.05;
+  group.add(floorPanel);
+
+  // Wall panels
+  // Front wall
+  const frontWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorWidth, wallHeight),
+    panelMaterial.clone()
+  );
+  frontWall.position.set(0, wallHeight/2, -floorDepth/2);
+  group.add(frontWall);
+
+  // Back wall
+  const backWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorWidth, wallHeight),
+    panelMaterial.clone()
+  );
+  backWall.position.set(0, wallHeight/2, floorDepth/2);
+  backWall.rotation.y = Math.PI;
+  group.add(backWall);
+
+  // Left wall
+  const leftWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorDepth, wallHeight),
+    panelMaterial.clone()
+  );
+  leftWall.position.set(-floorWidth/2, wallHeight/2, 0);
+  leftWall.rotation.y = Math.PI / 2;
+  group.add(leftWall);
+
+  // Right wall
+  const rightWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorDepth, wallHeight),
+    panelMaterial.clone()
+  );
+  rightWall.position.set(floorWidth/2, wallHeight/2, 0);
+  rightWall.rotation.y = -Math.PI / 2;
+  group.add(rightWall);
+
+  // Ceiling panel
+  const ceilingPanel = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorWidth, floorDepth),
+    panelMaterial.clone()
+  );
+  ceilingPanel.rotation.x = Math.PI / 2;
+  ceilingPanel.position.y = wallHeight;
+  group.add(ceilingPanel);
+
+  // Roof panels (gable)
+  const roofLength = Math.sqrt(roofPeak*roofPeak + (floorDepth/2)*(floorDepth/2));
+  
+  // Left roof slope
+  const leftRoof = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorWidth, roofLength),
+    panelMaterial.clone()
+  );
+  leftRoof.position.set(0, wallHeight + roofPeak/2, -floorDepth/4);
+  leftRoof.rotation.x = -Math.atan2(roofPeak, floorDepth/2);
+  group.add(leftRoof);
+
+  // Right roof slope
+  const rightRoof = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorWidth, roofLength),
+    panelMaterial.clone()
+  );
+  rightRoof.position.set(0, wallHeight + roofPeak/2, floorDepth/4);
+  rightRoof.rotation.x = Math.atan2(roofPeak, floorDepth/2);
+  group.add(rightRoof);
+
+  // Interior wall panel
+  const interiorWall = new THREE.Mesh(
+    new THREE.PlaneGeometry(floorDepth/2, wallHeight * 0.9),
+    panelMaterial.clone()
+  );
+  interiorWall.position.set(-2, wallHeight * 0.45, 0);
+  interiorWall.rotation.y = Math.PI / 2;
+  group.add(interiorWall);
+
   group.userData.components = components;
   return group;
 }
