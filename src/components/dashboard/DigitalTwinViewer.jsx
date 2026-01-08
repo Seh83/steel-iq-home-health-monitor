@@ -282,6 +282,8 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
   const previousMouseRef = useRef({ x: 0, y: 0 });
   const panelMarkersRef = useRef([]);
   const sensorMarkersRef = useRef([]);
+  const selectedComponentRef = useRef(null);
+  const hoveredComponentRef = useRef(null);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -608,9 +610,6 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     container.addEventListener('mouseup', onMouseUp);
     container.addEventListener('click', onClick);
     container.addEventListener('wheel', onWheel, { passive: false });
-    
-    const selectedComponentRef = { current: null };
-    const hoveredComponentRef = { current: null };
 
     // Animation
     let angle = 0;
@@ -813,10 +812,10 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
         <ComponentPropertiesPanel
           component={selectedComponent}
           onClose={() => {
-            setSelectedComponent(null);
-            if (selectedComponentRef?.current) {
+            if (selectedComponentRef.current) {
               selectedComponentRef.current.material.emissive.setHex(0x000000);
             }
+            setSelectedComponent(null);
           }}
         />
       )}
