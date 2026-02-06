@@ -199,6 +199,7 @@ function createWarehouse() {
       const colGeom = createIBeamGeometry(colSize, 0.02, colSize - 0.04, 0.02, eaveH);
       const col = addComponent(
         colGeom,
+        steelMaterial,
         [x, 0, z],
         'Structural Column',
         colId,
