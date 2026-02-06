@@ -86,15 +86,10 @@ function createWarehouse() {
     ],
   });
 
-  // --- Helpers ---
-  const addComponent = (geometry, material, position, type, componentId, rotation, additionalData = {}) => {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(...position);
-    if (rotation) {
-      if (rotation[0]) mesh.rotation.x = rotation[0];
-      if (rotation[1]) mesh.rotation.y = rotation[1];
-      if (rotation[2]) mesh.rotation.z = rotation[2];
-    }
+  const addSteel = (geo, mat, pos, type, id, data, rot) => {
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(pos[0], pos[1], pos[2]);
+    if (rot) mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.userData = {
@@ -216,7 +211,7 @@ function createWarehouse() {
       // Base plate
       addDecor(
         new THREE.BoxGeometry(bS * 2.5, 0.05, bS * 2.5),
-        steelAccent.clone(),
+        steelAccent,
         [x, 0.025, z]
       );
     }
@@ -276,7 +271,7 @@ function createWarehouse() {
       [W / 4, eaveH + ridgeH / 2, z],
       'Roof Rafter',
       `RR-R${rrN++}`,
-      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN'),
+      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter', '210 kg', '2000 kN'),
       [0, 0, -rafterAngle]
     );
 
@@ -292,34 +287,30 @@ function createWarehouse() {
 
     // King post
     addDecor(
-      new THREE.BoxGeometry(beamS * 0.6, ridgeH, beamS * 0.6),
-      steelDark,
-      [0, eaveH + ridgeH / 2, z],
-      null
+      new THREE.BoxGeometry(bS * 0.6, ridgeH, bS * 0.6),
+      steelAccent,
+      [0, eaveH + ridgeH / 2, z]
     );
 
-    // Diagonal web members (queen posts) - 2 per side
+    // Diagonal web members
     for (const side of [-1, 1]) {
-      // Inner diagonal: from bottom chord at W/4 up to ridge
       const diagX = side * W / 4;
       const diagLen = Math.sqrt((W / 4) ** 2 + ridgeH ** 2);
       const diagAngle = Math.atan2(ridgeH, W / 4) * side;
       addDecor(
-        new THREE.BoxGeometry(diagLen, beamS * 0.5, beamS * 0.5),
-        steelDark,
+        new THREE.BoxGeometry(diagLen, bS * 0.5, bS * 0.5),
+        steelAccent,
         [diagX / 2, eaveH + ridgeH / 2, z],
         [0, 0, diagAngle]
       );
-      // Vertical web at quarter
       addDecor(
-        new THREE.BoxGeometry(beamS * 0.5, ridgeH / 2, beamS * 0.5),
-        steelDark,
-        [diagX, eaveH + ridgeH / 4, z],
-        null
+        new THREE.BoxGeometry(bS * 0.5, ridgeH / 2, bS * 0.5),
+        steelAccent,
+        [diagX, eaveH + ridgeH / 4, z]
       );
     }
 
-    // Gusset plates at column-rafter connections
+    // Gusset plates
     for (const s of [-1, 1]) {
       const gussetShape = new THREE.Shape();
       gussetShape.moveTo(0, 0);
@@ -327,7 +318,7 @@ function createWarehouse() {
       gussetShape.lineTo(0, 0.6);
       gussetShape.lineTo(0, 0);
       const gussetGeo = new THREE.ExtrudeGeometry(gussetShape, { depth: bS * 0.3, bevelEnabled: false });
-      const gusset = new THREE.Mesh(gussetGeo, steelAccent.clone());
+      const gusset = new THREE.Mesh(gussetGeo, steelAccent);
       gusset.position.set(s * W / 2, eaveH, z);
       gusset.position.z -= bS * 0.15;
       group.add(gusset);
@@ -384,7 +375,7 @@ function createWarehouse() {
     const z0 = -D / 2 + bi * bay;
     const z1 = z0 + bay;
     for (const x of [-W / 2, W / 2]) {
-      const r1 = addRod([x, 0, z0], [x, eaveH, z1], 0.02, steelAccent.clone());
+      const r1 = addRod([x, 0, z0], [x, eaveH, z1], 0.02, steelAccent);
       r1.userData = {
         id: `BR-${brN}`, type: 'Wall Bracing', material: 'Steel Rod',
         position: { x, y: eaveH / 2, z: (z0 + z1) / 2 }, selectable: true,
@@ -393,7 +384,7 @@ function createWarehouse() {
       components.push(r1);
       brN++;
 
-      const r2 = addRod([x, eaveH, z0], [x, 0, z1], 0.02, steelAccent.clone());
+      const r2 = addRod([x, eaveH, z0], [x, 0, z1], 0.02, steelAccent);
       r2.userData = {
         id: `BR-${brN}`, type: 'Wall Bracing', material: 'Steel Rod',
         position: { x, y: eaveH / 2, z: (z0 + z1) / 2 }, selectable: true,
@@ -405,162 +396,131 @@ function createWarehouse() {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // CLADDING (using BufferGeometry for proper vertex positions)
+  // CLADDING / PANELS
   // ═══════════════════════════════════════════════════════════════════
 
   const hD = D / 2;
   const hW = W / 2;
-  const clad = 0.08; // cladding offset from frame
+  const clad = 0.08;
 
-      addDecor(
-        new THREE.CylinderGeometry(0.015, 0.015, roofBraceLen, 6),
-        steelDark,
-        [cx, midY, midZ],
-        [Math.atan2(baySpacing, 0), 0, Math.PI / 2]
-      );
-    }
-  }
+  // ── Side walls ────────────────────────────────────────────────────
+  const sideWallL = makeQuadGeo(
+    [-hW - clad, 0, -hD], [-hW - clad, 0, hD],
+    [-hW - clad, eaveH, hD], [-hW - clad, eaveH, -hD]
+  );
+  addDecor(sideWallL, wallPanelMat, [0, 0, 0]);
 
-  // =====================================================
-  // CLADDING / PANELS
-  // =====================================================
+  const sideWallR = makeQuadGeo(
+    [hW + clad, 0, -hD], [hW + clad, eaveH, -hD],
+    [hW + clad, eaveH, hD], [hW + clad, 0, hD]
+  );
+  addDecor(sideWallR, wallPanelMat, [0, 0, 0]);
 
-  // --- Side wall panels (left and right) ---
-  for (const x of [-W / 2, W / 2]) {
-    const wallMesh = addDecor(
-      new THREE.PlaneGeometry(D, eaveH),
-      corrugatedWall,
-      [x, eaveH / 2, 0],
-      [0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]
-    );
-  }
-
-  // --- Front wall (with roll-up door opening) ---
+  // ── Front wall with door opening ──────────────────────────────────
   const doorW = 6;
   const doorH = 5;
-  const frontZ = -D / 2 - 0.05;
+  const doorHalf = doorW / 2;
 
   // Left of door
   addDecor(
-    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
-    corrugatedWall,
-    [-(W + doorW) / 4, eaveH / 2, frontZ],
-    null
+    makeQuadGeo(
+      [-hW, 0, -hD - clad], [-hW, eaveH, -hD - clad],
+      [-doorHalf, eaveH, -hD - clad], [-doorHalf, 0, -hD - clad]
+    ),
+    wallPanelMat,
+    [0, 0, 0]
   );
+
   // Right of door
   addDecor(
-    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
-    corrugatedWall,
-    [(W + doorW) / 4, eaveH / 2, frontZ],
-    null
+    makeQuadGeo(
+      [doorHalf, 0, -hD - clad], [doorHalf, eaveH, -hD - clad],
+      [hW, eaveH, -hD - clad], [hW, 0, -hD - clad]
+    ),
+    wallPanelMat,
+    [0, 0, 0]
   );
+
+  // Above door
+  addDecor(
+    makeQuadGeo(
+      [-doorHalf, doorH, -hD - clad], [-doorHalf, eaveH, -hD - clad],
+      [doorHalf, eaveH, -hD - clad], [doorHalf, doorH, -hD - clad]
+    ),
+    wallPanelMat,
+    [0, 0, 0]
+  );
+
+  // Front gable (triangular)
+  addDecor(
+    makeTriGeo([0, apexH, -hD - clad], [-hW, eaveH, -hD - clad], [hW, eaveH, -hD - clad]),
+    wallPanelMat,
+    [0, 0, 0]
+  );
+
+  // ── Back wall ─────────────────────────────────────────────────────
+  addDecor(
+    makeQuadGeo(
+      [-hW, 0, hD + clad], [hW, 0, hD + clad],
+      [hW, eaveH, hD + clad], [-hW, eaveH, hD + clad]
+    ),
+    wallPanelMat,
+    [0, 0, 0]
+  );
+
   // Back gable
   addDecor(
-    new THREE.PlaneGeometry(doorW, eaveH - doorH),
-    corrugatedWall,
-    [0, eaveH - (eaveH - doorH) / 2, frontZ],
-    null
-  );
-  // Front gable (triangle above eave)
-  const gableShape = new THREE.Shape();
-  gableShape.moveTo(-W / 2, 0);
-  gableShape.lineTo(W / 2, 0);
-  gableShape.lineTo(0, ridgeH);
-  gableShape.lineTo(-W / 2, 0);
-  const frontGable = addDecor(
-    new THREE.ShapeGeometry(gableShape),
-    corrugatedWall,
-    [0, eaveH, frontZ],
-    null
-  );
-
-  // --- Door frame ---
-  const frameThick = 0.12;
-  const frameDepth = 0.15;
-  // Left jamb
-  addDecor(
-    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
-    doorFrameMaterial,
-    [-doorW / 2, doorH / 2, -D / 2],
-    null
-  );
-  // Right jamb
-  addDecor(
-    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
-    doorFrameMaterial,
-    [doorW / 2, doorH / 2, -D / 2],
-    null
-  );
-  // Right section
-  addDecor(
-    new THREE.BoxGeometry(doorW + frameThick * 2, frameThick, frameDepth),
-    doorFrameMaterial,
-    [0, doorH + frameThick / 2, -D / 2],
-    null
-  );
-  // Door track guides (thin rails)
-  for (const dx of [-1, 1]) {
-    addDecor(
-      new THREE.BoxGeometry(0.03, doorH, 0.04),
-      basePlateMaterial,
-      [dx * (doorW / 2 - 0.15), doorH / 2, -D / 2 + 0.05],
-      null
-    );
-  }
-
-  // --- Back wall ---
-  addDecor(
-    new THREE.PlaneGeometry(W, eaveH),
-    corrugatedWall,
-    [0, eaveH / 2, D / 2 + 0.05],
-    [0, Math.PI, 0]
-  );
-  // Front gable
-  addDecor(
-    new THREE.ShapeGeometry(gableShape),
-    corrugatedWall,
-    [0, eaveH, D / 2 + 0.05],
-    [0, Math.PI, 0]
+    makeTriGeo([0, apexH, hD + clad], [hW, eaveH, hD + clad], [-hW, eaveH, hD + clad]),
+    wallPanelMat,
+    [0, 0, 0]
   );
 
   // ── Door frame ────────────────────────────────────────────────────
   const ft = 0.12;
-  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat.clone(), [-doorHalf, doorH / 2, -hD]);
-  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat.clone(), [doorHalf, doorH / 2, -hD]);
-  addDecor(new THREE.BoxGeometry(doorW + ft * 2, ft, 0.2), trimMat.clone(), [0, doorH + ft / 2, -hD]);
+  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat, [-doorHalf, doorH / 2, -hD]);
+  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat, [doorHalf, doorH / 2, -hD]);
+  addDecor(new THREE.BoxGeometry(doorW + ft * 2, ft, 0.2), trimMat, [0, doorH + ft / 2, -hD]);
 
   // ── Roof panels (proper vertex-positioned quads) ──────────────────
   const roofOverhang = 0.3;
   // Left slope
-  const leftRoof = addDecor(
-    new THREE.PlaneGeometry(roofSlope, D + 0.3),
-    corrugatedRoof,
-    [-W / 4, eaveH + ridgeH / 2, 0],
-    [0, 0, rafterAngle]
+  addDecor(
+    makeQuadGeo(
+      [-hW - roofOverhang, eaveH, -hD - roofOverhang],
+      [-hW - roofOverhang, eaveH, hD + roofOverhang],
+      [0, apexH + roofOverhang * 0.5, hD + roofOverhang],
+      [0, apexH + roofOverhang * 0.5, -hD - roofOverhang]
+    ),
+    roofPanelMat,
+    [0, 0, 0]
   );
+
   // Right slope
-  const rightRoof = addDecor(
-    new THREE.PlaneGeometry(roofSlope, D + 0.3),
-    corrugatedRoof,
-    [W / 4, eaveH + ridgeH / 2, 0],
-    null
+  addDecor(
+    makeQuadGeo(
+      [0, apexH + roofOverhang * 0.5, -hD - roofOverhang],
+      [0, apexH + roofOverhang * 0.5, hD + roofOverhang],
+      [hW + roofOverhang, eaveH, hD + roofOverhang],
+      [hW + roofOverhang, eaveH, -hD - roofOverhang]
+    ),
+    roofPanelMat,
+    [0, 0, 0]
   );
 
   // ── Eave fascia trim ──────────────────────────────────────────────
   for (const s of [-1, 1]) {
     addDecor(
       new THREE.BoxGeometry(0.08, 0.3, D + 0.4),
-      trimMaterial,
-      [side * W / 2, eaveH + 0.15, 0],
-      null
+      trimMat,
+      [s * hW, eaveH + 0.15, 0]
     );
   }
+
   // Ridge cap
   addDecor(
     new THREE.BoxGeometry(0.15, 0.08, D + 0.4),
-    trimMaterial,
-    [0, apexH + 0.04, 0],
-    null
+    trimMat,
+    [0, apexH + 0.04, 0]
   );
 
   // ── Gutters (L-shaped profile at eave) ────────────────────────────
@@ -574,7 +534,7 @@ function createWarehouse() {
     gutterShape.lineTo(0, 0.02);
     gutterShape.lineTo(0, 0);
     const gutterGeo = new THREE.ExtrudeGeometry(gutterShape, { depth: D + roofOverhang, bevelEnabled: false });
-    const gutter = new THREE.Mesh(gutterGeo, trimMat.clone());
+    const gutter = new THREE.Mesh(gutterGeo, trimMat);
     gutter.position.set(s * (hW + roofOverhang) - (s > 0 ? 0.12 : 0), eaveH - 0.02, -(hD + roofOverhang / 2));
     group.add(gutter);
   }
@@ -584,40 +544,27 @@ function createWarehouse() {
     for (const sz of [-1, 1]) {
       addDecor(
         new THREE.CylinderGeometry(0.04, 0.04, eaveH, 8),
-        trimMaterial,
-        [x + (x < 0 ? 0.06 : -0.06), eaveH / 2, z + (z < 0 ? 0.06 : -0.06)],
-        null
+        trimMat,
+        [sx * hW + (sx < 0 ? 0.06 : -0.06), eaveH / 2, sz * hD + (sz < 0 ? 0.06 : -0.06)]
       );
     }
   }
 
-  // --- Small personnel door on right side wall ---
-  const personnelDoorW = 1.0;
-  const personnelDoorH = 2.2;
-  const personnelDoorZ = -D / 2 + 2;
-  // Cut visual: slightly recessed dark rectangle
+  // ── Personnel door (small door on right wall) ─────────────────────
+  const pdW = 1.0;
+  const pdH = 2.2;
+  const pdZ = -D / 2 + 2;
+  // Door panel
   addDecor(
-    new THREE.PlaneGeometry(personnelDoorW, personnelDoorH),
+    new THREE.PlaneGeometry(pdW, pdH),
     new THREE.MeshStandardMaterial({ color: 0x2a3a4a, metalness: 0.6, roughness: 0.4 }),
-    [W / 2 + 0.06, personnelDoorH / 2, personnelDoorZ],
+    [hW + clad + 0.02, pdH / 2, pdZ],
     [0, -Math.PI / 2, 0]
   );
-  // Door frame
-  addDecor(
-    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
-    doorFrameMaterial,
-    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ - personnelDoorW / 2],
-    [0, 0, 0]
-  );
-  addDecor(
-    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
-    doorFrameMaterial,
-    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ + personnelDoorW / 2],
-    [0, 0, 0]
-  );
-  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat.clone(), [hW + clad, pdH / 2, pdZ - pdW / 2]);
-  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat.clone(), [hW + clad, pdH / 2, pdZ + pdW / 2]);
-  addDecor(new THREE.BoxGeometry(0.06, 0.06, pdW + 0.12), trimMat.clone(), [hW + clad, pdH + 0.04, pdZ]);
+  // Frame
+  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat, [hW + clad, pdH / 2, pdZ - pdW / 2]);
+  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat, [hW + clad, pdH / 2, pdZ + pdW / 2]);
+  addDecor(new THREE.BoxGeometry(0.06, 0.06, pdW + 0.12), trimMat, [hW + clad, pdH + 0.04, pdZ]);
 
   group.userData.components = components;
   return group;
@@ -968,7 +915,6 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
           setSelectedPanel(userData.panelData);
           setSelectedComponent(null);
           setSelectedAlert(null);
-          // Don't open modal here, just show selection
         } else if (userData.type === 'sensor') {
           const panel = panels.find(p => p.panel_id === userData.sensorData.panel_id);
           setSelectedSensor(userData.sensorData);
@@ -1054,7 +1000,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       if (pingingPanelId) {
         const panelMarker = panelMarkersRef.current.find(p => p.panel.panel_id === pingingPanelId);
         if (panelMarker) {
-          const pingTime = (Date.now() % 2000) / 2000; // 2 second cycle
+          const pingTime = (Date.now() % 2000) / 2000;
           panelMarker.ring.scale.setScalar(1 + pingTime * 3);
           panelMarker.ring.material.opacity = 0.6 * (1 - pingTime);
         }
