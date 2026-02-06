@@ -271,7 +271,7 @@ function createWarehouse() {
       [W / 4, eaveH + ridgeH / 2, z],
       'Roof Rafter',
       `RR-R${rrN++}`,
-      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter', '210 kg', '2000 kN'),
+      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN'),
       [0, 0, -rafterAngle]
     );
 
