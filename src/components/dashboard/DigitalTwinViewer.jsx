@@ -86,12 +86,14 @@ function createWarehouse() {
     ],
   });
 
-  // Add a selectable structural component with optional edge wireframe
-  const addSteel = (geo, mat, pos, type, id, data, rot) => {
-    const mesh = new THREE.Mesh(geo, mat.clone());
-    mesh.position.set(pos[0], pos[1], pos[2]);
-    if (rot) {
-      mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
+  // --- Helpers ---
+  const addComponent = (geometry, material, position, type, componentId, rotation, additionalData = {}) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...position);
+    if (rotation) {
+      if (rotation[0]) mesh.rotation.x = rotation[0];
+      if (rotation[1]) mesh.rotation.y = rotation[1];
+      if (rotation[2]) mesh.rotation.z = rotation[2];
     }
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -290,25 +292,30 @@ function createWarehouse() {
 
     // King post
     addDecor(
-      new THREE.BoxGeometry(bS * 0.5, ridgeH - bS, bS * 0.5),
-      steelAccent.clone(),
-      [0, eaveH + ridgeH / 2 + bS * 0.25, z]
+      new THREE.BoxGeometry(beamS * 0.6, ridgeH, beamS * 0.6),
+      steelDark,
+      [0, eaveH + ridgeH / 2, z],
+      null
     );
 
-    // Web diagonals
-    for (const s of [-1, 1]) {
-      const qx = s * W / 4;
-      addRod(
-        [0, apexH - bS * 0.5, z],
-        [qx, eaveH + bS, z],
-        0.025,
-        steelAccent.clone()
+    // Diagonal web members (queen posts) - 2 per side
+    for (const side of [-1, 1]) {
+      // Inner diagonal: from bottom chord at W/4 up to ridge
+      const diagX = side * W / 4;
+      const diagLen = Math.sqrt((W / 4) ** 2 + ridgeH ** 2);
+      const diagAngle = Math.atan2(ridgeH, W / 4) * side;
+      addDecor(
+        new THREE.BoxGeometry(diagLen, beamS * 0.5, beamS * 0.5),
+        steelDark,
+        [diagX / 2, eaveH + ridgeH / 2, z],
+        [0, 0, diagAngle]
       );
       // Vertical web at quarter
       addDecor(
-        new THREE.BoxGeometry(bS * 0.4, ridgeH * 0.45, bS * 0.4),
-        steelAccent.clone(),
-        [qx, eaveH + ridgeH * 0.25 + bS, z]
+        new THREE.BoxGeometry(beamS * 0.5, ridgeH / 2, beamS * 0.5),
+        steelDark,
+        [diagX, eaveH + ridgeH / 4, z],
+        null
       );
     }
 
@@ -405,74 +412,115 @@ function createWarehouse() {
   const hW = W / 2;
   const clad = 0.08; // cladding offset from frame
 
-  // ── Side walls ────────────────────────────────────────────────────
-  for (const s of [-1, 1]) {
-    const x = s * (hW + clad);
-    addDecor(
-      makeQuadGeo(
-        [x, 0, -hD], [x, 0, hD],
-        [x, eaveH, hD], [x, eaveH, -hD]
-      ),
-      wallPanelMat.clone(),
-      [0, 0, 0]
+      addDecor(
+        new THREE.CylinderGeometry(0.015, 0.015, roofBraceLen, 6),
+        steelDark,
+        [cx, midY, midZ],
+        [Math.atan2(baySpacing, 0), 0, Math.PI / 2]
+      );
+    }
+  }
+
+  // =====================================================
+  // CLADDING / PANELS
+  // =====================================================
+
+  // --- Side wall panels (left and right) ---
+  for (const x of [-W / 2, W / 2]) {
+    const wallMesh = addDecor(
+      new THREE.PlaneGeometry(D, eaveH),
+      corrugatedWall,
+      [x, eaveH / 2, 0],
+      [0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]
     );
   }
 
-  // ── Back wall ─────────────────────────────────────────────────────
-  const bz = hD + clad;
+  // --- Front wall (with roll-up door opening) ---
+  const doorW = 6;
+  const doorH = 5;
+  const frontZ = -D / 2 - 0.05;
+
+  // Left of door
   addDecor(
-    makeQuadGeo(
-      [-hW, 0, bz], [hW, 0, bz],
-      [hW, eaveH, bz], [-hW, eaveH, bz]
-    ),
-    wallPanelMat.clone(),
-    [0, 0, 0]
+    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
+    corrugatedWall,
+    [-(W + doorW) / 4, eaveH / 2, frontZ],
+    null
+  );
+  // Right of door
+  addDecor(
+    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
+    corrugatedWall,
+    [(W + doorW) / 4, eaveH / 2, frontZ],
+    null
   );
   // Back gable
   addDecor(
-    makeTriGeo([-hW, eaveH, bz], [hW, eaveH, bz], [0, apexH, bz]),
-    wallPanelMat.clone(),
-    [0, 0, 0]
+    new THREE.PlaneGeometry(doorW, eaveH - doorH),
+    corrugatedWall,
+    [0, eaveH - (eaveH - doorH) / 2, frontZ],
+    null
+  );
+  // Front gable (triangle above eave)
+  const gableShape = new THREE.Shape();
+  gableShape.moveTo(-W / 2, 0);
+  gableShape.lineTo(W / 2, 0);
+  gableShape.lineTo(0, ridgeH);
+  gableShape.lineTo(-W / 2, 0);
+  const frontGable = addDecor(
+    new THREE.ShapeGeometry(gableShape),
+    corrugatedWall,
+    [0, eaveH, frontZ],
+    null
   );
 
-  // ── Front wall (with roll-up door opening) ────────────────────────
-  const fz = -(hD + clad);
-  const doorW = 6;
-  const doorH = 5;
-  const doorHalf = doorW / 2;
-
-  // Left section
+  // --- Door frame ---
+  const frameThick = 0.12;
+  const frameDepth = 0.15;
+  // Left jamb
   addDecor(
-    makeQuadGeo(
-      [-hW, 0, fz], [-doorHalf, 0, fz],
-      [-doorHalf, eaveH, fz], [-hW, eaveH, fz]
-    ),
-    wallPanelMat.clone(),
-    [0, 0, 0]
+    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
+    doorFrameMaterial,
+    [-doorW / 2, doorH / 2, -D / 2],
+    null
+  );
+  // Right jamb
+  addDecor(
+    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
+    doorFrameMaterial,
+    [doorW / 2, doorH / 2, -D / 2],
+    null
   );
   // Right section
   addDecor(
-    makeQuadGeo(
-      [doorHalf, 0, fz], [hW, 0, fz],
-      [hW, eaveH, fz], [doorHalf, eaveH, fz]
-    ),
-    wallPanelMat.clone(),
-    [0, 0, 0]
+    new THREE.BoxGeometry(doorW + frameThick * 2, frameThick, frameDepth),
+    doorFrameMaterial,
+    [0, doorH + frameThick / 2, -D / 2],
+    null
   );
-  // Above door
+  // Door track guides (thin rails)
+  for (const dx of [-1, 1]) {
+    addDecor(
+      new THREE.BoxGeometry(0.03, doorH, 0.04),
+      basePlateMaterial,
+      [dx * (doorW / 2 - 0.15), doorH / 2, -D / 2 + 0.05],
+      null
+    );
+  }
+
+  // --- Back wall ---
   addDecor(
-    makeQuadGeo(
-      [-doorHalf, doorH, fz], [doorHalf, doorH, fz],
-      [doorHalf, eaveH, fz], [-doorHalf, eaveH, fz]
-    ),
-    wallPanelMat.clone(),
-    [0, 0, 0]
+    new THREE.PlaneGeometry(W, eaveH),
+    corrugatedWall,
+    [0, eaveH / 2, D / 2 + 0.05],
+    [0, Math.PI, 0]
   );
   // Front gable
   addDecor(
-    makeTriGeo([-hW, eaveH, fz], [hW, eaveH, fz], [0, apexH, fz]),
-    wallPanelMat.clone(),
-    [0, 0, 0]
+    new THREE.ShapeGeometry(gableShape),
+    corrugatedWall,
+    [0, eaveH, D / 2 + 0.05],
+    [0, Math.PI, 0]
   );
 
   // ── Door frame ────────────────────────────────────────────────────
@@ -484,41 +532,35 @@ function createWarehouse() {
   // ── Roof panels (proper vertex-positioned quads) ──────────────────
   const roofOverhang = 0.3;
   // Left slope
-  addDecor(
-    makeQuadGeo(
-      [-(hW + roofOverhang), eaveH, -(hD + roofOverhang)],
-      [-(hW + roofOverhang), eaveH, hD + roofOverhang],
-      [0, apexH + 0.05, hD + roofOverhang],
-      [0, apexH + 0.05, -(hD + roofOverhang)]
-    ),
-    roofPanelMat.clone(),
-    [0, 0, 0]
+  const leftRoof = addDecor(
+    new THREE.PlaneGeometry(roofSlope, D + 0.3),
+    corrugatedRoof,
+    [-W / 4, eaveH + ridgeH / 2, 0],
+    [0, 0, rafterAngle]
   );
   // Right slope
-  addDecor(
-    makeQuadGeo(
-      [hW + roofOverhang, eaveH, -(hD + roofOverhang)],
-      [hW + roofOverhang, eaveH, hD + roofOverhang],
-      [0, apexH + 0.05, hD + roofOverhang],
-      [0, apexH + 0.05, -(hD + roofOverhang)]
-    ),
-    roofPanelMat.clone(),
-    [0, 0, 0]
+  const rightRoof = addDecor(
+    new THREE.PlaneGeometry(roofSlope, D + 0.3),
+    corrugatedRoof,
+    [W / 4, eaveH + ridgeH / 2, 0],
+    null
   );
 
   // ── Eave fascia trim ──────────────────────────────────────────────
   for (const s of [-1, 1]) {
     addDecor(
-      new THREE.BoxGeometry(0.08, 0.35, D + roofOverhang * 2),
-      trimMat.clone(),
-      [s * (hW + roofOverhang), eaveH + 0.15, 0]
+      new THREE.BoxGeometry(0.08, 0.3, D + 0.4),
+      trimMaterial,
+      [side * W / 2, eaveH + 0.15, 0],
+      null
     );
   }
   // Ridge cap
   addDecor(
-    new THREE.BoxGeometry(0.18, 0.1, D + roofOverhang * 2),
-    trimMat.clone(),
-    [0, apexH + 0.1, 0]
+    new THREE.BoxGeometry(0.15, 0.08, D + 0.4),
+    trimMaterial,
+    [0, apexH + 0.04, 0],
+    null
   );
 
   // ── Gutters (L-shaped profile at eave) ────────────────────────────
@@ -541,20 +583,37 @@ function createWarehouse() {
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
       addDecor(
-        new THREE.CylinderGeometry(0.035, 0.035, eaveH, 8),
-        trimMat.clone(),
-        [sx * (hW + roofOverhang - 0.06), eaveH / 2, sz * (hD - 0.2)]
+        new THREE.CylinderGeometry(0.04, 0.04, eaveH, 8),
+        trimMaterial,
+        [x + (x < 0 ? 0.06 : -0.06), eaveH / 2, z + (z < 0 ? 0.06 : -0.06)],
+        null
       );
     }
   }
 
-  // ── Personnel door on right wall ──────────────────────────────────
-  const pdW = 1.0, pdH = 2.2, pdZ = -hD + 2;
+  // --- Small personnel door on right side wall ---
+  const personnelDoorW = 1.0;
+  const personnelDoorH = 2.2;
+  const personnelDoorZ = -D / 2 + 2;
+  // Cut visual: slightly recessed dark rectangle
   addDecor(
-    new THREE.PlaneGeometry(pdH, pdW),
-    new THREE.MeshStandardMaterial({ color: 0x28394a, metalness: 0.5, roughness: 0.5, side: THREE.DoubleSide }),
-    [hW + clad + 0.01, pdH / 2, pdZ],
-    [0, Math.PI / 2, 0]
+    new THREE.PlaneGeometry(personnelDoorW, personnelDoorH),
+    new THREE.MeshStandardMaterial({ color: 0x2a3a4a, metalness: 0.6, roughness: 0.4 }),
+    [W / 2 + 0.06, personnelDoorH / 2, personnelDoorZ],
+    [0, -Math.PI / 2, 0]
+  );
+  // Door frame
+  addDecor(
+    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
+    doorFrameMaterial,
+    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ - personnelDoorW / 2],
+    [0, 0, 0]
+  );
+  addDecor(
+    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
+    doorFrameMaterial,
+    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ + personnelDoorW / 2],
+    [0, 0, 0]
   );
   addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat.clone(), [hW + clad, pdH / 2, pdZ - pdW / 2]);
   addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat.clone(), [hW + clad, pdH / 2, pdZ + pdW / 2]);
