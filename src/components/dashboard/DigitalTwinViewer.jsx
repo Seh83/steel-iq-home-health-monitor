@@ -86,7 +86,7 @@ function createWarehouse() {
     ],
   });
 
-  const addSteel = (geo, mat, pos, type, id, data, rot) => {
+  const addSteel = (geo, mat, pos, type, id, data, rot = null) => {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(pos[0], pos[1], pos[2]);
     if (rot) mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
