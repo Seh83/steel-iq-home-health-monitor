@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import AlertTooltip from './AlertTooltip';
@@ -7,216 +7,629 @@ import ComponentPropertiesPanel from './ComponentPropertiesPanel';
 import PanelDetailView from '../panels/PanelDetailView';
 import SensorActionModal from '../sensors/SensorActionModal';
 
-// Warehouse building generator
+// Warehouse building generator - detailed structural steel warehouse with gabled roof
 function createWarehouse() {
   const group = new THREE.Group();
-  const components = []; // Track all components for interaction
-  
-  const steelMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0x556677,
-    metalness: 0.9,
-    roughness: 0.2
-  });
-  
-  const panelMaterial = new THREE.MeshStandardMaterial({
-    color: 0xd4d8dd,
-    metalness: 0.3,
-    roughness: 0.7,
-    side: THREE.DoubleSide
+  const components = []; // Track all selectable structural components
+
+  // --- Materials ---
+  const steelMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6b7d8e,
+    metalness: 0.85,
+    roughness: 0.25,
   });
 
-  // Helper to create structural elements
-  const createBeam = (width, height, depth) => {
-    return new THREE.BoxGeometry(width, height, depth);
-  };
-  
-  // Helper to add component with metadata
-  const addComponent = (geometry, position, type, componentId, additionalData = {}) => {
-    const mesh = new THREE.Mesh(geometry, steelMaterial.clone());
+  const steelDark = new THREE.MeshStandardMaterial({
+    color: 0x4a5a6a,
+    metalness: 0.9,
+    roughness: 0.2,
+  });
+
+  const basePlateMaterial = new THREE.MeshStandardMaterial({
+    color: 0x5a6a7a,
+    metalness: 0.95,
+    roughness: 0.15,
+  });
+
+  const corrugatedWall = new THREE.MeshStandardMaterial({
+    color: 0xcdd5dc,
+    metalness: 0.55,
+    roughness: 0.45,
+    side: THREE.DoubleSide,
+  });
+
+  const corrugatedRoof = new THREE.MeshStandardMaterial({
+    color: 0xb8c4ce,
+    metalness: 0.65,
+    roughness: 0.35,
+    side: THREE.DoubleSide,
+  });
+
+  const trimMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3d5a80,
+    metalness: 0.7,
+    roughness: 0.3,
+  });
+
+  const floorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x808080,
+    roughness: 0.92,
+    metalness: 0.08,
+  });
+
+  const doorFrameMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3d5a80,
+    metalness: 0.8,
+    roughness: 0.25,
+  });
+
+  // --- Helpers ---
+  const addComponent = (geometry, material, position, type, componentId, rotation, additionalData = {}) => {
+    const mesh = new THREE.Mesh(geometry, material.clone());
     mesh.position.set(...position);
-    
-    // Store metadata
+    if (rotation) {
+      if (rotation[0]) mesh.rotation.x = rotation[0];
+      if (rotation[1]) mesh.rotation.y = rotation[1];
+      if (rotation[2]) mesh.rotation.z = rotation[2];
+    }
     mesh.userData = {
       id: componentId,
-      type: type,
-      material: 'Steel C-Channel',
+      type,
+      material: additionalData.materialName || 'Steel W-Section',
       position: { x: position[0], y: position[1], z: position[2] },
       selectable: true,
-      ...additionalData
+      ...additionalData,
     };
-    
     group.add(mesh);
     components.push(mesh);
     return mesh;
   };
 
-  // Warehouse dimensions
-  const warehouseWidth = 20;
-  const warehouseDepth = 15;
-  const wallHeight = 6;
-  const columnSpacing = 5;
-  const beamSize = 0.15;
+  const addDecor = (geometry, material, position, rotation) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(...position);
+    if (rotation) {
+      if (rotation[0]) mesh.rotation.x = rotation[0];
+      if (rotation[1]) mesh.rotation.y = rotation[1];
+      if (rotation[2]) mesh.rotation.z = rotation[2];
+    }
+    group.add(mesh);
+    return mesh;
+  };
 
-  // Create warehouse structure
-  let componentCounter = 1;
-  
-  // Steel columns (corner and intermediate)
-  let columnCounter = 1;
-  for (let x = -warehouseWidth/2; x <= warehouseWidth/2; x += columnSpacing) {
-    for (let z = -warehouseDepth/2; z <= warehouseDepth/2; z += columnSpacing) {
-      addComponent(
-        createBeam(beamSize, wallHeight, beamSize),
-        [x, wallHeight/2, z],
+  // Create an I-beam cross-section extruded along Y axis
+  const createIBeamGeometry = (flangeW, flangeT, webH, webT, length) => {
+    const shape = new THREE.Shape();
+    const hw = flangeW / 2;
+    const hh = (webH + 2 * flangeT) / 2;
+    const hwt = webT / 2;
+    // Bottom flange
+    shape.moveTo(-hw, -hh);
+    shape.lineTo(hw, -hh);
+    shape.lineTo(hw, -hh + flangeT);
+    shape.lineTo(hwt, -hh + flangeT);
+    // Web
+    shape.lineTo(hwt, hh - flangeT);
+    // Top flange
+    shape.lineTo(hw, hh - flangeT);
+    shape.lineTo(hw, hh);
+    shape.lineTo(-hw, hh);
+    shape.lineTo(-hw, hh - flangeT);
+    shape.lineTo(-hwt, hh - flangeT);
+    // Web other side
+    shape.lineTo(-hwt, -hh + flangeT);
+    shape.lineTo(-hw, -hh + flangeT);
+    shape.lineTo(-hw, -hh);
+
+    const extrudeSettings = { steps: 1, depth: length, bevelEnabled: false };
+    return new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  };
+
+  // --- Dimensions ---
+  const W = 20;        // warehouse width (X)
+  const D = 15;        // warehouse depth (Z)
+  const eaveH = 6;     // eave height (wall height)
+  const ridgeH = 3;    // extra height from eave to ridge
+  const apexH = eaveH + ridgeH; // total ridge height
+  const baySpacing = 5; // spacing along Z between frames
+  const colSize = 0.2;  // column flange width visual
+  const beamS = 0.12;   // beam/purlin size
+
+  // Number of bays along depth
+  const numBaysZ = Math.round(D / baySpacing);
+
+  // --- Concrete floor slab ---
+  addDecor(
+    new THREE.BoxGeometry(W + 0.4, 0.25, D + 0.4),
+    floorMaterial,
+    [0, -0.125, 0],
+    null
+  );
+
+  // Floor markings (subtle grid lines)
+  for (let x = -W / 2 + baySpacing; x < W / 2; x += baySpacing) {
+    addDecor(
+      new THREE.BoxGeometry(0.02, 0.005, D),
+      new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.8 }),
+      [x, 0.005, 0],
+      null
+    );
+  }
+  for (let z = -D / 2 + baySpacing; z < D / 2; z += baySpacing) {
+    addDecor(
+      new THREE.BoxGeometry(W, 0.005, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.8 }),
+      [0, 0.005, z],
+      null
+    );
+  }
+
+  // =====================================================
+  // STRUCTURAL STEEL FRAME
+  // =====================================================
+
+  let colCounter = 1;
+  let pbCounter = 1;
+  let rtCounter = 1;
+  let purlinCounter = 1;
+  let girtCounter = 1;
+  let braceCounter = 1;
+
+  const defaultComponentData = (type, dims, weight, loadRating) => ({
+    dimensions: dims,
+    weight,
+    loadRating,
+    status: 'Good',
+    sensors: type === 'Structural Column' ? 2 : 1,
+    lastInspection: '2024-12-15',
+    installDate: '2024-03-10',
+    readings: [
+      { label: 'Stress', value: `${(0.5 + Math.random() * 0.8).toFixed(2)} kN` },
+      { label: 'Temp', value: `${Math.round(65 + Math.random() * 8)}°F` },
+    ],
+  });
+
+  // --- Columns along perimeter at each bay ---
+  // Only left (x = -W/2) and right (x = W/2) walls
+  for (let zi = 0; zi <= numBaysZ; zi++) {
+    const z = -D / 2 + zi * baySpacing;
+    for (const x of [-W / 2, W / 2]) {
+      const colId = `COL-${colCounter++}`;
+      // Column: I-beam shape extruded upward
+      const colGeom = createIBeamGeometry(colSize, 0.02, colSize - 0.04, 0.02, eaveH);
+      const col = addComponent(
+        colGeom,
+        [x, 0, z],
         'Structural Column',
-        `COL-${columnCounter++}`,
-        { dimensions: `${beamSize.toFixed(2)}m x ${wallHeight}m x ${beamSize.toFixed(2)}m`, weight: '285 kg', loadRating: '2500 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-15', installDate: '2024-03-10', readings: [{ label: 'Load', value: '1.24 kN' }, { label: 'Temp', value: '68°F' }] }
+        colId,
+        null,
+        defaultComponentData('Structural Column', `W8x31 (${colSize}m flange, ${eaveH}m tall)`, '285 kg', '2500 kN')
       );
+      // Rotate so extrusion goes upward (extruded along +Z by default, we want +Y)
+      col.rotation.x = -Math.PI / 2;
+      col.position.y = 0;
+
+      // Base plate
+      addDecor(
+        new THREE.BoxGeometry(colSize * 2, 0.04, colSize * 2),
+        basePlateMaterial,
+        [x, 0.02, z],
+        null
+      );
+      // Anchor bolts (4 small cylinders)
+      for (const dx of [-1, 1]) {
+        for (const dz of [-1, 1]) {
+          addDecor(
+            new THREE.CylinderGeometry(0.015, 0.015, 0.06, 8),
+            basePlateMaterial,
+            [x + dx * colSize * 0.7, 0.07, z + dz * colSize * 0.7],
+            null
+          );
+        }
+      }
     }
   }
-  
-  // Perimeter beams (top)
-  let beamCounter = 1;
-  // Front and back horizontal beams
-  for (let x = -warehouseWidth/2; x < warehouseWidth/2; x += columnSpacing) {
-    addComponent(
-      createBeam(columnSpacing, beamSize, beamSize),
-      [x + columnSpacing/2, wallHeight, -warehouseDepth/2],
-      'Perimeter Beam',
-      `PB-F${beamCounter}`,
-      { dimensions: `${columnSpacing}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.85 kN' }, { label: 'Temp', value: '69°F' }] }
-    );
-    addComponent(
-      createBeam(columnSpacing, beamSize, beamSize),
-      [x + columnSpacing/2, wallHeight, warehouseDepth/2],
-      'Perimeter Beam',
-      `PB-B${beamCounter++}`,
-      { dimensions: `${columnSpacing}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.82 kN' }, { label: 'Temp', value: '70°F' }] }
-    );
-  }
-  
-  // Left and right horizontal beams
-  for (let z = -warehouseDepth/2; z < warehouseDepth/2; z += columnSpacing) {
-    addComponent(
-      createBeam(beamSize, beamSize, columnSpacing),
-      [-warehouseWidth/2, wallHeight, z + columnSpacing/2],
-      'Perimeter Beam',
-      `PB-L${beamCounter}`,
-      { dimensions: `${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m x ${columnSpacing}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.88 kN' }, { label: 'Temp', value: '68°F' }] }
-    );
-    addComponent(
-      createBeam(beamSize, beamSize, columnSpacing),
-      [warehouseWidth/2, wallHeight, z + columnSpacing/2],
-      'Perimeter Beam',
-      `PB-R${beamCounter++}`,
-      { dimensions: `${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m x ${columnSpacing}m`, weight: '180 kg', loadRating: '1800 kN', status: 'Good', sensors: 2, lastInspection: '2024-12-10', installDate: '2024-03-12', readings: [{ label: 'Stress', value: '0.79 kN' }, { label: 'Temp', value: '71°F' }] }
-    );
-  }
-  
-  // Internal support beams
-  let internalBeamCounter = 1;
-  for (let z = -warehouseDepth/2 + columnSpacing; z < warehouseDepth/2; z += columnSpacing) {
-    for (let x = -warehouseWidth/2; x < warehouseWidth/2; x += columnSpacing) {
+
+  // --- Eave beams (top of wall, along Z on left and right sides) ---
+  for (let zi = 0; zi < numBaysZ; zi++) {
+    const z0 = -D / 2 + zi * baySpacing;
+    const zMid = z0 + baySpacing / 2;
+    for (const x of [-W / 2, W / 2]) {
+      const side = x < 0 ? 'L' : 'R';
       addComponent(
-        createBeam(columnSpacing, beamSize, beamSize),
-        [x + columnSpacing/2, wallHeight, z],
-        'Support Beam',
-        `SB-${internalBeamCounter++}`,
-        { dimensions: `${columnSpacing}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '180 kg', loadRating: '1500 kN', status: 'Good', sensors: 1, lastInspection: '2024-12-08', installDate: '2024-03-14', readings: [{ label: 'Stress', value: '0.65 kN' }, { label: 'Temp', value: '70°F' }] }
+        new THREE.BoxGeometry(beamS, beamS, baySpacing),
+        steelMaterial,
+        [x, eaveH, zMid],
+        'Eave Beam',
+        `EB-${side}${pbCounter}`,
+        null,
+        defaultComponentData('Eave Beam', `${baySpacing}m x ${beamS}m x ${beamS}m`, '180 kg', '1800 kN')
       );
     }
+    pbCounter++;
   }
-  
-  // Roof trusses
-  const roofHeight = 2.5;
-  let trussCounter = 1;
-  for (let z = -warehouseDepth/2; z <= warehouseDepth/2; z += columnSpacing) {
-    // Main truss beam
+
+  // --- Eave beams along X (front and back walls at eave height) ---
+  let eaveFBCounter = 1;
+  for (const z of [-D / 2, D / 2]) {
+    const side = z < 0 ? 'F' : 'B';
     addComponent(
-      createBeam(warehouseWidth, beamSize, beamSize),
-      [0, wallHeight + roofHeight/2, z],
-      'Roof Truss',
-      `RT-${trussCounter++}`,
-      { dimensions: `${warehouseWidth}m x ${beamSize.toFixed(2)}m x ${beamSize.toFixed(2)}m`, weight: '320 kg', loadRating: '2200 kN', status: 'Good', sensors: 3, lastInspection: '2024-12-05', installDate: '2024-03-18', readings: [{ label: 'Stress', value: '0.92 kN' }, { label: 'Temp', value: '66°F' }] }
+      new THREE.BoxGeometry(W, beamS, beamS),
+      steelMaterial,
+      [0, eaveH, z],
+      'Perimeter Beam',
+      `PB-${side}${eaveFBCounter++}`,
+      null,
+      defaultComponentData('Perimeter Beam', `${W}m x ${beamS}m x ${beamS}m`, '340 kg', '1800 kN')
     );
   }
 
-  // Warehouse wall and roof panels
-  const corrugatedPanelMaterial = new THREE.MeshStandardMaterial({
-    color: 0xe8eaed,
-    metalness: 0.6,
-    roughness: 0.4,
-    side: THREE.DoubleSide
-  });
-  
-  // Concrete floor
-  const floorGeometry = new THREE.BoxGeometry(warehouseWidth, 0.2, warehouseDepth);
-  const floorMat = new THREE.MeshStandardMaterial({ 
-    color: 0x888888,
-    roughness: 0.9,
-    metalness: 0.1
-  });
-  const floor = new THREE.Mesh(floorGeometry, floorMat);
-  floor.position.y = -0.1;
-  group.add(floor);
-  
-  // Front wall panels (with large door opening)
-  const doorWidth = 6;
-  const doorHeight = 5;
-  const frontLeftPanel = new THREE.Mesh(
-    new THREE.PlaneGeometry((warehouseWidth - doorWidth)/2, wallHeight),
-    corrugatedPanelMaterial.clone()
+  // --- Gabled Roof Trusses (at each bay line along Z) ---
+  // Each truss = two sloped rafters + bottom chord + vertical king post + diagonal web members
+  const rafterLen = Math.sqrt((W / 2) ** 2 + ridgeH ** 2);
+  const rafterAngle = Math.atan2(ridgeH, W / 2);
+
+  for (let zi = 0; zi <= numBaysZ; zi++) {
+    const z = -D / 2 + zi * baySpacing;
+    const trussId = `RT-${rtCounter++}`;
+
+    // Left rafter (from left eave up to ridge)
+    addComponent(
+      new THREE.BoxGeometry(rafterLen, beamS, beamS),
+      steelDark,
+      [-W / 4, eaveH + ridgeH / 2, z],
+      'Roof Rafter',
+      `RR-L${zi + 1}`,
+      [0, 0, rafterAngle],
+      defaultComponentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN')
+    );
+
+    // Right rafter
+    addComponent(
+      new THREE.BoxGeometry(rafterLen, beamS, beamS),
+      steelDark,
+      [W / 4, eaveH + ridgeH / 2, z],
+      'Roof Rafter',
+      `RR-R${zi + 1}`,
+      [0, 0, -rafterAngle],
+      defaultComponentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN')
+    );
+
+    // Bottom chord (horizontal tie beam at eave level connecting columns)
+    addComponent(
+      new THREE.BoxGeometry(W, beamS * 0.8, beamS * 0.8),
+      steelMaterial,
+      [0, eaveH + beamS, z],
+      'Roof Truss',
+      trussId,
+      null,
+      defaultComponentData('Roof Truss', `${W}m bottom chord`, '320 kg', '2200 kN')
+    );
+
+    // King post (vertical from bottom chord to ridge)
+    addDecor(
+      new THREE.BoxGeometry(beamS * 0.6, ridgeH, beamS * 0.6),
+      steelDark.clone(),
+      [0, eaveH + ridgeH / 2, z],
+      null
+    );
+
+    // Diagonal web members (queen posts) - 2 per side
+    for (const side of [-1, 1]) {
+      // Inner diagonal: from bottom chord at W/4 up to ridge
+      const diagX = side * W / 4;
+      const diagLen = Math.sqrt((W / 4) ** 2 + ridgeH ** 2);
+      const diagAngle = Math.atan2(ridgeH, W / 4) * side;
+      addDecor(
+        new THREE.BoxGeometry(diagLen, beamS * 0.5, beamS * 0.5),
+        steelDark.clone(),
+        [diagX / 2, eaveH + ridgeH / 2, z],
+        [0, 0, diagAngle]
+      );
+
+      // Vertical web at quarter point
+      addDecor(
+        new THREE.BoxGeometry(beamS * 0.5, ridgeH / 2, beamS * 0.5),
+        steelDark.clone(),
+        [diagX, eaveH + ridgeH / 4, z],
+        null
+      );
+    }
+  }
+
+  // --- Ridge beam (runs full length at apex) ---
+  addComponent(
+    new THREE.BoxGeometry(beamS * 1.2, beamS * 1.2, D),
+    steelDark,
+    [0, apexH, 0],
+    'Ridge Beam',
+    'RB-1',
+    null,
+    {
+      ...defaultComponentData('Ridge Beam', `${D}m x ${(beamS * 1.2).toFixed(2)}m`, '380 kg', '2400 kN'),
+      materialName: 'Steel W-Section',
+    }
   );
-  frontLeftPanel.position.set(-warehouseWidth/4 - doorWidth/4, wallHeight/2, -warehouseDepth/2);
-  group.add(frontLeftPanel);
-  
-  const frontRightPanel = new THREE.Mesh(
-    new THREE.PlaneGeometry((warehouseWidth - doorWidth)/2, wallHeight),
-    corrugatedPanelMaterial.clone()
+
+  // --- Purlins (run along Z on each roof slope) ---
+  const numPurlinsPerSide = 3;
+  for (let pi = 1; pi <= numPurlinsPerSide; pi++) {
+    const frac = pi / (numPurlinsPerSide + 1);
+    const px = (W / 2) * frac;
+    const py = eaveH + ridgeH * frac;
+
+    for (const side of [-1, 1]) {
+      addComponent(
+        new THREE.BoxGeometry(beamS * 0.7, beamS * 0.7, D),
+        steelMaterial,
+        [side * px, py, 0],
+        'Roof Purlin',
+        `PUR-${side < 0 ? 'L' : 'R'}${purlinCounter}`,
+        null,
+        defaultComponentData('Roof Purlin', `${D}m C-purlin`, '45 kg', '600 kN')
+      );
+      purlinCounter++;
+    }
+  }
+
+  // --- Girts (horizontal wall framing on side walls) ---
+  const girtHeights = [1.5, 3.0, 4.5];
+  for (const gy of girtHeights) {
+    for (let zi = 0; zi < numBaysZ; zi++) {
+      const z0 = -D / 2 + zi * baySpacing;
+      const zMid = z0 + baySpacing / 2;
+      for (const x of [-W / 2, W / 2]) {
+        const side = x < 0 ? 'L' : 'R';
+        addComponent(
+          new THREE.BoxGeometry(beamS * 0.6, beamS * 0.6, baySpacing),
+          steelMaterial,
+          [x, gy, zMid],
+          'Wall Girt',
+          `GRT-${side}${girtCounter++}`,
+          null,
+          defaultComponentData('Wall Girt', `${baySpacing}m C-girt`, '35 kg', '400 kN')
+        );
+      }
+    }
+  }
+
+  // --- Cross-bracing on end bays of side walls ---
+  for (const zi of [0, numBaysZ - 1]) {
+    const z0 = -D / 2 + zi * baySpacing;
+    const z1 = z0 + baySpacing;
+    const braceLen = Math.sqrt(baySpacing ** 2 + eaveH ** 2);
+
+    for (const x of [-W / 2, W / 2]) {
+      // X-brace: two diagonal rods
+      const brace1 = addComponent(
+        new THREE.CylinderGeometry(0.02, 0.02, braceLen, 6),
+        steelDark,
+        [x, eaveH / 2, (z0 + z1) / 2],
+        'Wall Bracing',
+        `BR-${braceCounter++}`,
+        null,
+        defaultComponentData('Wall Bracing', `${braceLen.toFixed(1)}m rod`, '25 kg', '300 kN')
+      );
+      const braceAngle1 = Math.atan2(eaveH, baySpacing);
+      brace1.rotation.x = braceAngle1;
+      if (x > 0) brace1.rotation.y = Math.PI;
+
+      const brace2 = addComponent(
+        new THREE.CylinderGeometry(0.02, 0.02, braceLen, 6),
+        steelDark,
+        [x, eaveH / 2, (z0 + z1) / 2],
+        'Wall Bracing',
+        `BR-${braceCounter++}`,
+        null,
+        defaultComponentData('Wall Bracing', `${braceLen.toFixed(1)}m rod`, '25 kg', '300 kN')
+      );
+      brace2.rotation.x = -braceAngle1;
+      if (x > 0) brace2.rotation.y = Math.PI;
+    }
+  }
+
+  // --- Cross-bracing in roof plane (end bays) ---
+  for (const zi of [0, numBaysZ - 1]) {
+    const z0 = -D / 2 + zi * baySpacing;
+    const z1 = z0 + baySpacing;
+    const roofBraceLen = Math.sqrt((W / 2) ** 2 + baySpacing ** 2);
+
+    for (const side of [-1, 1]) {
+      const cx = side * W / 4;
+      const midY = eaveH + ridgeH / 2;
+      const midZ = (z0 + z1) / 2;
+
+      addDecor(
+        new THREE.CylinderGeometry(0.015, 0.015, roofBraceLen, 6),
+        steelDark.clone(),
+        [cx, midY, midZ],
+        [Math.atan2(baySpacing, 0), 0, Math.PI / 2]
+      );
+    }
+  }
+
+  // =====================================================
+  // CLADDING / PANELS
+  // =====================================================
+
+  // --- Side wall panels (left and right) ---
+  for (const x of [-W / 2, W / 2]) {
+    const wallMesh = addDecor(
+      new THREE.PlaneGeometry(D, eaveH),
+      corrugatedWall.clone(),
+      [x, eaveH / 2, 0],
+      [0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]
+    );
+    // Add slight offset so panels sit outside the frame
+    wallMesh.position.x += (x < 0 ? -0.05 : 0.05);
+  }
+
+  // --- Front wall (with roll-up door opening) ---
+  const doorW = 6;
+  const doorH = 5;
+  const frontZ = -D / 2 - 0.05;
+
+  // Left of door
+  addDecor(
+    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
+    corrugatedWall.clone(),
+    [-(W + doorW) / 4, eaveH / 2, frontZ],
+    null
   );
-  frontRightPanel.position.set(warehouseWidth/4 + doorWidth/4, wallHeight/2, -warehouseDepth/2);
-  group.add(frontRightPanel);
-  
-  const frontTopPanel = new THREE.Mesh(
-    new THREE.PlaneGeometry(doorWidth, wallHeight - doorHeight),
-    corrugatedPanelMaterial.clone()
+  // Right of door
+  addDecor(
+    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
+    corrugatedWall.clone(),
+    [(W + doorW) / 4, eaveH / 2, frontZ],
+    null
   );
-  frontTopPanel.position.set(0, wallHeight - (wallHeight - doorHeight)/2, -warehouseDepth/2);
-  group.add(frontTopPanel);
-  
-  // Back wall panel
-  const backWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(warehouseWidth, wallHeight),
-    corrugatedPanelMaterial.clone()
+  // Above door
+  addDecor(
+    new THREE.PlaneGeometry(doorW, eaveH - doorH),
+    corrugatedWall.clone(),
+    [0, eaveH - (eaveH - doorH) / 2, frontZ],
+    null
   );
-  backWall.position.set(0, wallHeight/2, warehouseDepth/2);
-  backWall.rotation.y = Math.PI;
-  group.add(backWall);
-  
-  // Side walls
-  const leftWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(warehouseDepth, wallHeight),
-    corrugatedPanelMaterial.clone()
+  // Front gable (triangle above eave)
+  const gableShape = new THREE.Shape();
+  gableShape.moveTo(-W / 2, 0);
+  gableShape.lineTo(W / 2, 0);
+  gableShape.lineTo(0, ridgeH);
+  gableShape.lineTo(-W / 2, 0);
+  const frontGable = addDecor(
+    new THREE.ShapeGeometry(gableShape),
+    corrugatedWall.clone(),
+    [0, eaveH, frontZ],
+    null
   );
-  leftWall.position.set(-warehouseWidth/2, wallHeight/2, 0);
-  leftWall.rotation.y = Math.PI / 2;
-  group.add(leftWall);
-  
-  const rightWall = new THREE.Mesh(
-    new THREE.PlaneGeometry(warehouseDepth, wallHeight),
-    corrugatedPanelMaterial.clone()
+
+  // --- Door frame ---
+  const frameThick = 0.12;
+  const frameDepth = 0.15;
+  // Left jamb
+  addDecor(
+    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
+    doorFrameMaterial.clone(),
+    [-doorW / 2, doorH / 2, -D / 2],
+    null
   );
-  rightWall.position.set(warehouseWidth/2, wallHeight/2, 0);
-  rightWall.rotation.y = -Math.PI / 2;
-  group.add(rightWall);
-  
-  // Flat roof panels
-  const roofPanel = new THREE.Mesh(
-    new THREE.PlaneGeometry(warehouseWidth, warehouseDepth),
-    corrugatedPanelMaterial.clone()
+  // Right jamb
+  addDecor(
+    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
+    doorFrameMaterial.clone(),
+    [doorW / 2, doorH / 2, -D / 2],
+    null
   );
-  roofPanel.position.y = wallHeight + roofHeight;
-  roofPanel.rotation.x = Math.PI / 2;
-  group.add(roofPanel);
+  // Header
+  addDecor(
+    new THREE.BoxGeometry(doorW + frameThick * 2, frameThick, frameDepth),
+    doorFrameMaterial.clone(),
+    [0, doorH + frameThick / 2, -D / 2],
+    null
+  );
+  // Door track guides (thin rails)
+  for (const dx of [-1, 1]) {
+    addDecor(
+      new THREE.BoxGeometry(0.03, doorH, 0.04),
+      basePlateMaterial.clone(),
+      [dx * (doorW / 2 - 0.15), doorH / 2, -D / 2 + 0.05],
+      null
+    );
+  }
+
+  // --- Back wall ---
+  addDecor(
+    new THREE.PlaneGeometry(W, eaveH),
+    corrugatedWall.clone(),
+    [0, eaveH / 2, D / 2 + 0.05],
+    [0, Math.PI, 0]
+  );
+  // Back gable
+  addDecor(
+    new THREE.ShapeGeometry(gableShape),
+    corrugatedWall.clone(),
+    [0, eaveH, D / 2 + 0.05],
+    [0, Math.PI, 0]
+  );
+
+  // --- Sloped roof panels ---
+  const roofSlope = Math.sqrt((W / 2) ** 2 + ridgeH ** 2);
+  // Left slope
+  const leftRoof = addDecor(
+    new THREE.PlaneGeometry(roofSlope, D + 0.3),
+    corrugatedRoof.clone(),
+    [-W / 4, eaveH + ridgeH / 2, 0],
+    [0, 0, rafterAngle]
+  );
+  leftRoof.rotation.order = 'YXZ';
+  leftRoof.rotation.set(0, 0, rafterAngle);
+  leftRoof.position.set(-W / 4, eaveH + ridgeH / 2, 0);
+
+  // Right slope
+  const rightRoof = addDecor(
+    new THREE.PlaneGeometry(roofSlope, D + 0.3),
+    corrugatedRoof.clone(),
+    [W / 4, eaveH + ridgeH / 2, 0],
+    null
+  );
+  rightRoof.rotation.order = 'YXZ';
+  rightRoof.rotation.set(0, 0, -rafterAngle);
+  rightRoof.position.set(W / 4, eaveH + ridgeH / 2, 0);
+
+  // --- Eave trim / fascia (along the bottom edge of roof on both sides) ---
+  for (const side of [-1, 1]) {
+    addDecor(
+      new THREE.BoxGeometry(0.08, 0.3, D + 0.4),
+      trimMaterial.clone(),
+      [side * W / 2, eaveH + 0.15, 0],
+      null
+    );
+  }
+  // Ridge cap
+  addDecor(
+    new THREE.BoxGeometry(0.15, 0.08, D + 0.4),
+    trimMaterial.clone(),
+    [0, apexH + 0.04, 0],
+    null
+  );
+
+  // --- Downspouts and gutters (subtle detail) ---
+  for (const x of [-W / 2, W / 2]) {
+    for (const z of [-D / 2, D / 2]) {
+      // Gutter bracket at corner
+      addDecor(
+        new THREE.CylinderGeometry(0.04, 0.04, eaveH, 8),
+        trimMaterial.clone(),
+        [x + (x < 0 ? 0.06 : -0.06), eaveH / 2, z + (z < 0 ? 0.06 : -0.06)],
+        null
+      );
+    }
+  }
+
+  // --- Small personnel door on right side wall ---
+  const personnelDoorW = 1.0;
+  const personnelDoorH = 2.2;
+  const personnelDoorZ = -D / 2 + 2;
+  // Cut visual: slightly recessed dark rectangle
+  addDecor(
+    new THREE.PlaneGeometry(personnelDoorW, personnelDoorH),
+    new THREE.MeshStandardMaterial({ color: 0x2a3a4a, metalness: 0.6, roughness: 0.4 }),
+    [W / 2 + 0.06, personnelDoorH / 2, personnelDoorZ],
+    [0, -Math.PI / 2, 0]
+  );
+  // Door frame
+  addDecor(
+    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
+    doorFrameMaterial.clone(),
+    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ - personnelDoorW / 2],
+    [0, 0, 0]
+  );
+  addDecor(
+    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
+    doorFrameMaterial.clone(),
+    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ + personnelDoorW / 2],
+    [0, 0, 0]
+  );
 
   group.userData.components = components;
   return group;
