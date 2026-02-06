@@ -65,7 +65,7 @@ function createWarehouse() {
 
   // --- Helpers ---
   const addComponent = (geometry, material, position, type, componentId, rotation, additionalData = {}) => {
-    const mesh = new THREE.Mesh(geometry, material.clone());
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(...position);
     if (rotation) {
       if (rotation[0]) mesh.rotation.x = rotation[0];
@@ -309,7 +309,7 @@ function createWarehouse() {
     // King post (vertical from bottom chord to ridge)
     addDecor(
       new THREE.BoxGeometry(beamS * 0.6, ridgeH, beamS * 0.6),
-      steelDark.clone(),
+      steelDark,
       [0, eaveH + ridgeH / 2, z],
       null
     );
@@ -322,7 +322,7 @@ function createWarehouse() {
       const diagAngle = Math.atan2(ridgeH, W / 4) * side;
       addDecor(
         new THREE.BoxGeometry(diagLen, beamS * 0.5, beamS * 0.5),
-        steelDark.clone(),
+        steelDark,
         [diagX / 2, eaveH + ridgeH / 2, z],
         [0, 0, diagAngle]
       );
@@ -330,7 +330,7 @@ function createWarehouse() {
       // Vertical web at quarter point
       addDecor(
         new THREE.BoxGeometry(beamS * 0.5, ridgeH / 2, beamS * 0.5),
-        steelDark.clone(),
+        steelDark,
         [diagX, eaveH + ridgeH / 4, z],
         null
       );
@@ -441,7 +441,7 @@ function createWarehouse() {
 
       addDecor(
         new THREE.CylinderGeometry(0.015, 0.015, roofBraceLen, 6),
-        steelDark.clone(),
+        steelDark,
         [cx, midY, midZ],
         [Math.atan2(baySpacing, 0), 0, Math.PI / 2]
       );
@@ -456,7 +456,7 @@ function createWarehouse() {
   for (const x of [-W / 2, W / 2]) {
     const wallMesh = addDecor(
       new THREE.PlaneGeometry(D, eaveH),
-      corrugatedWall.clone(),
+      corrugatedWall,
       [x, eaveH / 2, 0],
       [0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]
     );
@@ -472,21 +472,21 @@ function createWarehouse() {
   // Left of door
   addDecor(
     new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
-    corrugatedWall.clone(),
+    corrugatedWall,
     [-(W + doorW) / 4, eaveH / 2, frontZ],
     null
   );
   // Right of door
   addDecor(
     new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
-    corrugatedWall.clone(),
+    corrugatedWall,
     [(W + doorW) / 4, eaveH / 2, frontZ],
     null
   );
   // Above door
   addDecor(
     new THREE.PlaneGeometry(doorW, eaveH - doorH),
-    corrugatedWall.clone(),
+    corrugatedWall,
     [0, eaveH - (eaveH - doorH) / 2, frontZ],
     null
   );
@@ -498,7 +498,7 @@ function createWarehouse() {
   gableShape.lineTo(-W / 2, 0);
   const frontGable = addDecor(
     new THREE.ShapeGeometry(gableShape),
-    corrugatedWall.clone(),
+    corrugatedWall,
     [0, eaveH, frontZ],
     null
   );
@@ -509,21 +509,21 @@ function createWarehouse() {
   // Left jamb
   addDecor(
     new THREE.BoxGeometry(frameThick, doorH, frameDepth),
-    doorFrameMaterial.clone(),
+    doorFrameMaterial,
     [-doorW / 2, doorH / 2, -D / 2],
     null
   );
   // Right jamb
   addDecor(
     new THREE.BoxGeometry(frameThick, doorH, frameDepth),
-    doorFrameMaterial.clone(),
+    doorFrameMaterial,
     [doorW / 2, doorH / 2, -D / 2],
     null
   );
   // Header
   addDecor(
     new THREE.BoxGeometry(doorW + frameThick * 2, frameThick, frameDepth),
-    doorFrameMaterial.clone(),
+    doorFrameMaterial,
     [0, doorH + frameThick / 2, -D / 2],
     null
   );
@@ -531,7 +531,7 @@ function createWarehouse() {
   for (const dx of [-1, 1]) {
     addDecor(
       new THREE.BoxGeometry(0.03, doorH, 0.04),
-      basePlateMaterial.clone(),
+      basePlateMaterial,
       [dx * (doorW / 2 - 0.15), doorH / 2, -D / 2 + 0.05],
       null
     );
@@ -540,14 +540,14 @@ function createWarehouse() {
   // --- Back wall ---
   addDecor(
     new THREE.PlaneGeometry(W, eaveH),
-    corrugatedWall.clone(),
+    corrugatedWall,
     [0, eaveH / 2, D / 2 + 0.05],
     [0, Math.PI, 0]
   );
   // Back gable
   addDecor(
     new THREE.ShapeGeometry(gableShape),
-    corrugatedWall.clone(),
+    corrugatedWall,
     [0, eaveH, D / 2 + 0.05],
     [0, Math.PI, 0]
   );
@@ -557,7 +557,7 @@ function createWarehouse() {
   // Left slope
   const leftRoof = addDecor(
     new THREE.PlaneGeometry(roofSlope, D + 0.3),
-    corrugatedRoof.clone(),
+    corrugatedRoof,
     [-W / 4, eaveH + ridgeH / 2, 0],
     [0, 0, rafterAngle]
   );
@@ -568,7 +568,7 @@ function createWarehouse() {
   // Right slope
   const rightRoof = addDecor(
     new THREE.PlaneGeometry(roofSlope, D + 0.3),
-    corrugatedRoof.clone(),
+    corrugatedRoof,
     [W / 4, eaveH + ridgeH / 2, 0],
     null
   );
@@ -580,7 +580,7 @@ function createWarehouse() {
   for (const side of [-1, 1]) {
     addDecor(
       new THREE.BoxGeometry(0.08, 0.3, D + 0.4),
-      trimMaterial.clone(),
+      trimMaterial,
       [side * W / 2, eaveH + 0.15, 0],
       null
     );
@@ -588,7 +588,7 @@ function createWarehouse() {
   // Ridge cap
   addDecor(
     new THREE.BoxGeometry(0.15, 0.08, D + 0.4),
-    trimMaterial.clone(),
+    trimMaterial,
     [0, apexH + 0.04, 0],
     null
   );
@@ -599,7 +599,7 @@ function createWarehouse() {
       // Gutter bracket at corner
       addDecor(
         new THREE.CylinderGeometry(0.04, 0.04, eaveH, 8),
-        trimMaterial.clone(),
+        trimMaterial,
         [x + (x < 0 ? 0.06 : -0.06), eaveH / 2, z + (z < 0 ? 0.06 : -0.06)],
         null
       );
@@ -620,13 +620,13 @@ function createWarehouse() {
   // Door frame
   addDecor(
     new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
-    doorFrameMaterial.clone(),
+    doorFrameMaterial,
     [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ - personnelDoorW / 2],
     [0, 0, 0]
   );
   addDecor(
     new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
-    doorFrameMaterial.clone(),
+    doorFrameMaterial,
     [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ + personnelDoorW / 2],
     [0, 0, 0]
   );
