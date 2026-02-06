@@ -7,175 +7,72 @@ import ComponentPropertiesPanel from './ComponentPropertiesPanel';
 import PanelDetailView from '../panels/PanelDetailView';
 import SensorActionModal from '../sensors/SensorActionModal';
 
-// Warehouse building generator - detailed structural steel warehouse with gabled roof
+// Warehouse building generator - high-quality structural steel warehouse with gabled roof
 function createWarehouse() {
   const group = new THREE.Group();
-  const components = []; // Track all selectable structural components
+  const components = [];
 
-  // --- Materials ---
-  const steelMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6b7d8e,
-    metalness: 0.85,
-    roughness: 0.25,
+  // ── Materials ──────────────────────────────────────────────────────
+  const steelPrimary = new THREE.MeshPhysicalMaterial({
+    color: 0x708090,
+    metalness: 0.82,
+    roughness: 0.28,
+    clearcoat: 0.1,
+    clearcoatRoughness: 0.4,
   });
 
-  const steelDark = new THREE.MeshStandardMaterial({
-    color: 0x4a5a6a,
-    metalness: 0.9,
-    roughness: 0.2,
+  const steelAccent = new THREE.MeshPhysicalMaterial({
+    color: 0x5a6e7f,
+    metalness: 0.88,
+    roughness: 0.22,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.3,
   });
 
-  const basePlateMaterial = new THREE.MeshStandardMaterial({
-    color: 0x5a6a7a,
-    metalness: 0.95,
-    roughness: 0.15,
-  });
-
-  const corrugatedWall = new THREE.MeshStandardMaterial({
-    color: 0xcdd5dc,
-    metalness: 0.55,
-    roughness: 0.45,
+  const wallPanelMat = new THREE.MeshPhysicalMaterial({
+    color: 0xd0d8e0,
+    metalness: 0.5,
+    roughness: 0.5,
     side: THREE.DoubleSide,
   });
 
-  const corrugatedRoof = new THREE.MeshStandardMaterial({
-    color: 0xb8c4ce,
-    metalness: 0.65,
-    roughness: 0.35,
+  const roofPanelMat = new THREE.MeshPhysicalMaterial({
+    color: 0xaab8c8,
+    metalness: 0.6,
+    roughness: 0.4,
     side: THREE.DoubleSide,
   });
 
-  const trimMaterial = new THREE.MeshStandardMaterial({
-    color: 0x3d5a80,
-    metalness: 0.7,
+  const trimMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2c4a6e,
+    metalness: 0.75,
     roughness: 0.3,
   });
 
-  const floorMaterial = new THREE.MeshStandardMaterial({
+  const floorMat = new THREE.MeshStandardMaterial({
     color: 0x808080,
     roughness: 0.92,
-    metalness: 0.08,
+    metalness: 0.05,
   });
 
-  const doorFrameMaterial = new THREE.MeshStandardMaterial({
-    color: 0x3d5a80,
-    metalness: 0.8,
-    roughness: 0.25,
+  const edgeLineMat = new THREE.LineBasicMaterial({
+    color: 0x3a4a5a,
+    transparent: true,
+    opacity: 0.35,
   });
 
-  // --- Helpers ---
-  const addComponent = (geometry, material, position, type, componentId, rotation, additionalData = {}) => {
-    const mesh = new THREE.Mesh(geometry, material.clone());
-    mesh.position.set(...position);
-    if (rotation) {
-      if (rotation[0]) mesh.rotation.x = rotation[0];
-      if (rotation[1]) mesh.rotation.y = rotation[1];
-      if (rotation[2]) mesh.rotation.z = rotation[2];
-    }
-    mesh.userData = {
-      id: componentId,
-      type,
-      material: additionalData.materialName || 'Steel W-Section',
-      position: { x: position[0], y: position[1], z: position[2] },
-      selectable: true,
-      ...additionalData,
-    };
-    group.add(mesh);
-    components.push(mesh);
-    return mesh;
-  };
+  // ── Dimensions ────────────────────────────────────────────────────
+  const W = 20;
+  const D = 15;
+  const eaveH = 6;
+  const ridgeH = 3;
+  const apexH = eaveH + ridgeH;
+  const bay = 5;
+  const numBays = Math.round(D / bay);
+  const bS = 0.15;  // beam cross-section size
 
-  const addDecor = (geometry, material, position, rotation) => {
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(...position);
-    if (rotation) {
-      if (rotation[0]) mesh.rotation.x = rotation[0];
-      if (rotation[1]) mesh.rotation.y = rotation[1];
-      if (rotation[2]) mesh.rotation.z = rotation[2];
-    }
-    group.add(mesh);
-    return mesh;
-  };
-
-  // Create an I-beam cross-section extruded along Y axis
-  const createIBeamGeometry = (flangeW, flangeT, webH, webT, length) => {
-    const shape = new THREE.Shape();
-    const hw = flangeW / 2;
-    const hh = (webH + 2 * flangeT) / 2;
-    const hwt = webT / 2;
-    // Bottom flange
-    shape.moveTo(-hw, -hh);
-    shape.lineTo(hw, -hh);
-    shape.lineTo(hw, -hh + flangeT);
-    shape.lineTo(hwt, -hh + flangeT);
-    // Web
-    shape.lineTo(hwt, hh - flangeT);
-    // Top flange
-    shape.lineTo(hw, hh - flangeT);
-    shape.lineTo(hw, hh);
-    shape.lineTo(-hw, hh);
-    shape.lineTo(-hw, hh - flangeT);
-    shape.lineTo(-hwt, hh - flangeT);
-    // Web other side
-    shape.lineTo(-hwt, -hh + flangeT);
-    shape.lineTo(-hw, -hh + flangeT);
-    shape.lineTo(-hw, -hh);
-
-    const extrudeSettings = { steps: 1, depth: length, bevelEnabled: false };
-    return new THREE.ExtrudeGeometry(shape, extrudeSettings);
-  };
-
-  // --- Dimensions ---
-  const W = 20;        // warehouse width (X)
-  const D = 15;        // warehouse depth (Z)
-  const eaveH = 6;     // eave height (wall height)
-  const ridgeH = 3;    // extra height from eave to ridge
-  const apexH = eaveH + ridgeH; // total ridge height
-  const baySpacing = 5; // spacing along Z between frames
-  const colSize = 0.2;  // column flange width visual
-  const beamS = 0.12;   // beam/purlin size
-
-  // Number of bays along depth
-  const numBaysZ = Math.round(D / baySpacing);
-
-  // --- Concrete floor slab ---
-  addDecor(
-    new THREE.BoxGeometry(W + 0.4, 0.25, D + 0.4),
-    floorMaterial,
-    [0, -0.125, 0],
-    null
-  );
-
-  // Floor markings (subtle grid lines)
-  for (let x = -W / 2 + baySpacing; x < W / 2; x += baySpacing) {
-    addDecor(
-      new THREE.BoxGeometry(0.02, 0.005, D),
-      new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.8 }),
-      [x, 0.005, 0],
-      null
-    );
-  }
-  for (let z = -D / 2 + baySpacing; z < D / 2; z += baySpacing) {
-    addDecor(
-      new THREE.BoxGeometry(W, 0.005, 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.8 }),
-      [0, 0.005, z],
-      null
-    );
-  }
-
-  // =====================================================
-  // STRUCTURAL STEEL FRAME
-  // =====================================================
-
-  let colCounter = 1;
-  let pbCounter = 1;
-  let rtCounter = 1;
-  let purlinCounter = 1;
-  let girtCounter = 1;
-  let braceCounter = 1;
-
-  const defaultComponentData = (type, dims, weight, loadRating) => ({
+  // ── Helpers ───────────────────────────────────────────────────────
+  const componentData = (type, dims, weight, loadRating) => ({
     dimensions: dims,
     weight,
     loadRating,
@@ -189,448 +86,479 @@ function createWarehouse() {
     ],
   });
 
-  // --- Columns along perimeter at each bay ---
-  // Only left (x = -W/2) and right (x = W/2) walls
-  for (let zi = 0; zi <= numBaysZ; zi++) {
-    const z = -D / 2 + zi * baySpacing;
+  // Add a selectable structural component with optional edge wireframe
+  const addSteel = (geo, mat, pos, type, id, data, rot) => {
+    const mesh = new THREE.Mesh(geo, mat.clone());
+    mesh.position.set(pos[0], pos[1], pos[2]);
+    if (rot) {
+      mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
+    }
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData = {
+      id,
+      type,
+      material: 'Steel W-Section',
+      position: { x: pos[0], y: pos[1], z: pos[2] },
+      selectable: true,
+      ...data,
+    };
+    group.add(mesh);
+    components.push(mesh);
+
+    // Edge wireframe for crisp look
+    const edges = new THREE.EdgesGeometry(geo, 20);
+    const line = new THREE.LineSegments(edges, edgeLineMat);
+    mesh.add(line);
+
+    return mesh;
+  };
+
+  // Add non-selectable decoration
+  const addDecor = (geo, mat, pos, rot) => {
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(pos[0], pos[1], pos[2]);
+    if (rot) mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+
+  // Build a quad from 4 corners (for roof panels, gables)
+  const makeQuadGeo = (a, b, c, d) => {
+    const geo = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2],
+      a[0], a[1], a[2], c[0], c[1], c[2], d[0], d[1], d[2],
+    ]);
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
+    return geo;
+  };
+
+  // Build a triangle from 3 corners
+  const makeTriGeo = (a, b, c) => {
+    const geo = new THREE.BufferGeometry();
+    const verts = new Float32Array([a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]]);
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
+    return geo;
+  };
+
+  // Create a line between two 3D points
+  const addLine = (p1, p2, mat) => {
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(p1[0], p1[1], p1[2]),
+      new THREE.Vector3(p2[0], p2[1], p2[2]),
+    ]);
+    const line = new THREE.Line(geo, mat);
+    group.add(line);
+    return line;
+  };
+
+  // Create rod between two points (for bracing)
+  const addRod = (p1, p2, radius, mat) => {
+    const start = new THREE.Vector3(p1[0], p1[1], p1[2]);
+    const end = new THREE.Vector3(p2[0], p2[1], p2[2]);
+    const dir = new THREE.Vector3().subVectors(end, start);
+    const len = dir.length();
+    const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+    const geo = new THREE.CylinderGeometry(radius, radius, len, 6);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(mid);
+    mesh.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.normalize()
+    );
+    mesh.castShadow = true;
+    group.add(mesh);
+    return mesh;
+  };
+
+  // ── Floor ─────────────────────────────────────────────────────────
+  addDecor(
+    new THREE.BoxGeometry(W + 0.6, 0.2, D + 0.6),
+    floorMat,
+    [0, -0.1, 0]
+  );
+
+  // Subtle floor grid
+  const gridMat = new THREE.LineBasicMaterial({ color: 0x666666, transparent: true, opacity: 0.15 });
+  for (let x = -W / 2; x <= W / 2; x += bay) {
+    addLine([x, 0.01, -D / 2], [x, 0.01, D / 2], gridMat);
+  }
+  for (let z = -D / 2; z <= D / 2; z += bay) {
+    addLine([-W / 2, 0.01, z], [W / 2, 0.01, z], gridMat);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // STRUCTURAL STEEL FRAME
+  // ═══════════════════════════════════════════════════════════════════
+
+  let colN = 1, ebN = 1, rtN = 1, rrN = 1, purN = 1, grtN = 1, brN = 1;
+
+  // ── Columns ───────────────────────────────────────────────────────
+  for (let zi = 0; zi <= numBays; zi++) {
+    const z = -D / 2 + zi * bay;
     for (const x of [-W / 2, W / 2]) {
-      const colId = `COL-${colCounter++}`;
-      // Column: I-beam shape extruded upward
-      const colGeom = createIBeamGeometry(colSize, 0.02, colSize - 0.04, 0.02, eaveH);
-      const col = addComponent(
-        colGeom,
-        steelMaterial,
-        [x, 0, z],
+      addSteel(
+        new THREE.BoxGeometry(bS, eaveH, bS),
+        steelPrimary,
+        [x, eaveH / 2, z],
         'Structural Column',
-        colId,
-        null,
-        defaultComponentData('Structural Column', `W8x31 (${colSize}m flange, ${eaveH}m tall)`, '285 kg', '2500 kN')
+        `COL-${colN++}`,
+        componentData('Structural Column', `W8x31 (${bS}m x ${eaveH}m)`, '285 kg', '2500 kN')
       );
-      // Rotate so extrusion goes upward (extruded along +Z by default, we want +Y)
-      col.rotation.x = -Math.PI / 2;
-      col.position.y = 0;
 
       // Base plate
       addDecor(
-        new THREE.BoxGeometry(colSize * 2, 0.04, colSize * 2),
-        basePlateMaterial,
-        [x, 0.02, z],
-        null
+        new THREE.BoxGeometry(bS * 2.5, 0.05, bS * 2.5),
+        steelAccent.clone(),
+        [x, 0.025, z]
       );
-      // Anchor bolts (4 small cylinders)
-      for (const dx of [-1, 1]) {
-        for (const dz of [-1, 1]) {
-          addDecor(
-            new THREE.CylinderGeometry(0.015, 0.015, 0.06, 8),
-            basePlateMaterial,
-            [x + dx * colSize * 0.7, 0.07, z + dz * colSize * 0.7],
-            null
-          );
-        }
-      }
     }
   }
 
-  // --- Eave beams (top of wall, along Z on left and right sides) ---
-  for (let zi = 0; zi < numBaysZ; zi++) {
-    const z0 = -D / 2 + zi * baySpacing;
-    const zMid = z0 + baySpacing / 2;
+  // ── Eave beams (side walls, along Z) ──────────────────────────────
+  for (let zi = 0; zi < numBays; zi++) {
+    const zMid = -D / 2 + zi * bay + bay / 2;
     for (const x of [-W / 2, W / 2]) {
       const side = x < 0 ? 'L' : 'R';
-      addComponent(
-        new THREE.BoxGeometry(beamS, beamS, baySpacing),
-        steelMaterial,
+      addSteel(
+        new THREE.BoxGeometry(bS * 0.9, bS * 0.9, bay),
+        steelPrimary,
         [x, eaveH, zMid],
         'Eave Beam',
-        `EB-${side}${pbCounter}`,
-        null,
-        defaultComponentData('Eave Beam', `${baySpacing}m x ${beamS}m x ${beamS}m`, '180 kg', '1800 kN')
+        `EB-${side}${ebN++}`,
+        componentData('Eave Beam', `${bay}m x ${bS}m`, '180 kg', '1800 kN')
       );
     }
-    pbCounter++;
   }
 
-  // --- Eave beams along X (front and back walls at eave height) ---
-  let eaveFBCounter = 1;
+  // ── Perimeter beams (front & back, along X) ──────────────────────
   for (const z of [-D / 2, D / 2]) {
     const side = z < 0 ? 'F' : 'B';
-    addComponent(
-      new THREE.BoxGeometry(W, beamS, beamS),
-      steelMaterial,
+    addSteel(
+      new THREE.BoxGeometry(W, bS * 0.9, bS * 0.9),
+      steelPrimary,
       [0, eaveH, z],
       'Perimeter Beam',
-      `PB-${side}${eaveFBCounter++}`,
-      null,
-      defaultComponentData('Perimeter Beam', `${W}m x ${beamS}m x ${beamS}m`, '340 kg', '1800 kN')
+      `PB-${side}1`,
+      componentData('Perimeter Beam', `${W}m x ${bS}m`, '340 kg', '1800 kN')
     );
   }
 
-  // --- Gabled Roof Trusses (at each bay line along Z) ---
-  // Each truss = two sloped rafters + bottom chord + vertical king post + diagonal web members
+  // ── Roof trusses at each bay line ─────────────────────────────────
   const rafterLen = Math.sqrt((W / 2) ** 2 + ridgeH ** 2);
   const rafterAngle = Math.atan2(ridgeH, W / 2);
 
-  for (let zi = 0; zi <= numBaysZ; zi++) {
-    const z = -D / 2 + zi * baySpacing;
-    const trussId = `RT-${rtCounter++}`;
+  for (let zi = 0; zi <= numBays; zi++) {
+    const z = -D / 2 + zi * bay;
 
-    // Left rafter (from left eave up to ridge)
-    addComponent(
-      new THREE.BoxGeometry(rafterLen, beamS, beamS),
-      steelDark,
+    // Left rafter
+    addSteel(
+      new THREE.BoxGeometry(rafterLen, bS, bS),
+      steelAccent,
       [-W / 4, eaveH + ridgeH / 2, z],
       'Roof Rafter',
-      `RR-L${zi + 1}`,
-      [0, 0, rafterAngle],
-      defaultComponentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN')
+      `RR-L${rrN}`,
+      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN'),
+      [0, 0, rafterAngle]
     );
 
     // Right rafter
-    addComponent(
-      new THREE.BoxGeometry(rafterLen, beamS, beamS),
-      steelDark,
+    addSteel(
+      new THREE.BoxGeometry(rafterLen, bS, bS),
+      steelAccent,
       [W / 4, eaveH + ridgeH / 2, z],
       'Roof Rafter',
-      `RR-R${zi + 1}`,
-      [0, 0, -rafterAngle],
-      defaultComponentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN')
+      `RR-R${rrN++}`,
+      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN'),
+      [0, 0, -rafterAngle]
     );
 
-    // Bottom chord (horizontal tie beam at eave level connecting columns)
-    addComponent(
-      new THREE.BoxGeometry(W, beamS * 0.8, beamS * 0.8),
-      steelMaterial,
-      [0, eaveH + beamS, z],
+    // Bottom chord
+    addSteel(
+      new THREE.BoxGeometry(W, bS * 0.7, bS * 0.7),
+      steelPrimary,
+      [0, eaveH + bS * 0.5, z],
       'Roof Truss',
-      trussId,
-      null,
-      defaultComponentData('Roof Truss', `${W}m bottom chord`, '320 kg', '2200 kN')
+      `RT-${rtN++}`,
+      componentData('Roof Truss', `${W}m bottom chord`, '320 kg', '2200 kN')
     );
 
-    // King post (vertical from bottom chord to ridge)
+    // King post
     addDecor(
-      new THREE.BoxGeometry(beamS * 0.6, ridgeH, beamS * 0.6),
-      steelDark.clone(),
-      [0, eaveH + ridgeH / 2, z],
-      null
+      new THREE.BoxGeometry(bS * 0.5, ridgeH - bS, bS * 0.5),
+      steelAccent.clone(),
+      [0, eaveH + ridgeH / 2 + bS * 0.25, z]
     );
 
-    // Diagonal web members (queen posts) - 2 per side
-    for (const side of [-1, 1]) {
-      // Inner diagonal: from bottom chord at W/4 up to ridge
-      const diagX = side * W / 4;
-      const diagLen = Math.sqrt((W / 4) ** 2 + ridgeH ** 2);
-      const diagAngle = Math.atan2(ridgeH, W / 4) * side;
-      addDecor(
-        new THREE.BoxGeometry(diagLen, beamS * 0.5, beamS * 0.5),
-        steelDark.clone(),
-        [diagX / 2, eaveH + ridgeH / 2, z],
-        [0, 0, diagAngle]
+    // Web diagonals
+    for (const s of [-1, 1]) {
+      const qx = s * W / 4;
+      addRod(
+        [0, apexH - bS * 0.5, z],
+        [qx, eaveH + bS, z],
+        0.025,
+        steelAccent.clone()
       );
+      // Vertical web at quarter
+      addDecor(
+        new THREE.BoxGeometry(bS * 0.4, ridgeH * 0.45, bS * 0.4),
+        steelAccent.clone(),
+        [qx, eaveH + ridgeH * 0.25 + bS, z]
+      );
+    }
 
-      // Vertical web at quarter point
-      addDecor(
-        new THREE.BoxGeometry(beamS * 0.5, ridgeH / 2, beamS * 0.5),
-        steelDark.clone(),
-        [diagX, eaveH + ridgeH / 4, z],
-        null
-      );
+    // Gusset plates at column-rafter connections
+    for (const s of [-1, 1]) {
+      const gussetShape = new THREE.Shape();
+      gussetShape.moveTo(0, 0);
+      gussetShape.lineTo(s * 0.6, 0);
+      gussetShape.lineTo(0, 0.6);
+      gussetShape.lineTo(0, 0);
+      const gussetGeo = new THREE.ExtrudeGeometry(gussetShape, { depth: bS * 0.3, bevelEnabled: false });
+      const gusset = new THREE.Mesh(gussetGeo, steelAccent.clone());
+      gusset.position.set(s * W / 2, eaveH, z);
+      gusset.position.z -= bS * 0.15;
+      group.add(gusset);
     }
   }
 
-  // --- Ridge beam (runs full length at apex) ---
-  addComponent(
-    new THREE.BoxGeometry(beamS * 1.2, beamS * 1.2, D),
-    steelDark,
+  // ── Ridge beam ────────────────────────────────────────────────────
+  addSteel(
+    new THREE.BoxGeometry(bS * 1.2, bS * 1.2, D),
+    steelAccent,
     [0, apexH, 0],
     'Ridge Beam',
     'RB-1',
-    null,
-    {
-      ...defaultComponentData('Ridge Beam', `${D}m x ${(beamS * 1.2).toFixed(2)}m`, '380 kg', '2400 kN'),
-      materialName: 'Steel W-Section',
-    }
+    componentData('Ridge Beam', `${D}m x ${(bS * 1.2).toFixed(2)}m`, '380 kg', '2400 kN')
   );
 
-  // --- Purlins (run along Z on each roof slope) ---
-  const numPurlinsPerSide = 3;
-  for (let pi = 1; pi <= numPurlinsPerSide; pi++) {
-    const frac = pi / (numPurlinsPerSide + 1);
+  // ── Purlins (3 per slope, run along Z) ────────────────────────────
+  for (let pi = 1; pi <= 3; pi++) {
+    const frac = pi / 4;
     const px = (W / 2) * frac;
     const py = eaveH + ridgeH * frac;
-
-    for (const side of [-1, 1]) {
-      addComponent(
-        new THREE.BoxGeometry(beamS * 0.7, beamS * 0.7, D),
-        steelMaterial,
-        [side * px, py, 0],
+    for (const s of [-1, 1]) {
+      addSteel(
+        new THREE.BoxGeometry(bS * 0.6, bS * 0.6, D),
+        steelPrimary,
+        [s * px, py, 0],
         'Roof Purlin',
-        `PUR-${side < 0 ? 'L' : 'R'}${purlinCounter}`,
-        null,
-        defaultComponentData('Roof Purlin', `${D}m C-purlin`, '45 kg', '600 kN')
+        `PUR-${s < 0 ? 'L' : 'R'}${purN++}`,
+        componentData('Roof Purlin', `${D}m C-purlin`, '45 kg', '600 kN')
       );
-      purlinCounter++;
     }
   }
 
-  // --- Girts (horizontal wall framing on side walls) ---
-  const girtHeights = [1.5, 3.0, 4.5];
-  for (const gy of girtHeights) {
-    for (let zi = 0; zi < numBaysZ; zi++) {
-      const z0 = -D / 2 + zi * baySpacing;
-      const zMid = z0 + baySpacing / 2;
+  // ── Girts (horizontal wall framing at 3 heights) ──────────────────
+  for (const gy of [1.5, 3.0, 4.5]) {
+    for (let zi = 0; zi < numBays; zi++) {
+      const zMid = -D / 2 + zi * bay + bay / 2;
       for (const x of [-W / 2, W / 2]) {
         const side = x < 0 ? 'L' : 'R';
-        addComponent(
-          new THREE.BoxGeometry(beamS * 0.6, beamS * 0.6, baySpacing),
-          steelMaterial,
+        addSteel(
+          new THREE.BoxGeometry(bS * 0.5, bS * 0.5, bay),
+          steelPrimary,
           [x, gy, zMid],
           'Wall Girt',
-          `GRT-${side}${girtCounter++}`,
-          null,
-          defaultComponentData('Wall Girt', `${baySpacing}m C-girt`, '35 kg', '400 kN')
+          `GRT-${side}${grtN++}`,
+          componentData('Wall Girt', `${bay}m C-girt`, '35 kg', '400 kN')
         );
       }
     }
   }
 
-  // --- Cross-bracing on end bays of side walls ---
-  for (const zi of [0, numBaysZ - 1]) {
-    const z0 = -D / 2 + zi * baySpacing;
-    const z1 = z0 + baySpacing;
-    const braceLen = Math.sqrt(baySpacing ** 2 + eaveH ** 2);
-
+  // ── Wall X-bracing (end bays) ─────────────────────────────────────
+  for (const bi of [0, numBays - 1]) {
+    const z0 = -D / 2 + bi * bay;
+    const z1 = z0 + bay;
     for (const x of [-W / 2, W / 2]) {
-      // X-brace: two diagonal rods
-      const brace1 = addComponent(
-        new THREE.CylinderGeometry(0.02, 0.02, braceLen, 6),
-        steelDark,
-        [x, eaveH / 2, (z0 + z1) / 2],
-        'Wall Bracing',
-        `BR-${braceCounter++}`,
-        null,
-        defaultComponentData('Wall Bracing', `${braceLen.toFixed(1)}m rod`, '25 kg', '300 kN')
-      );
-      const braceAngle1 = Math.atan2(eaveH, baySpacing);
-      brace1.rotation.x = braceAngle1;
-      if (x > 0) brace1.rotation.y = Math.PI;
+      const r1 = addRod([x, 0, z0], [x, eaveH, z1], 0.02, steelAccent.clone());
+      r1.userData = {
+        id: `BR-${brN}`, type: 'Wall Bracing', material: 'Steel Rod',
+        position: { x, y: eaveH / 2, z: (z0 + z1) / 2 }, selectable: true,
+        ...componentData('Wall Bracing', `${Math.sqrt(bay ** 2 + eaveH ** 2).toFixed(1)}m rod`, '25 kg', '300 kN'),
+      };
+      components.push(r1);
+      brN++;
 
-      const brace2 = addComponent(
-        new THREE.CylinderGeometry(0.02, 0.02, braceLen, 6),
-        steelDark,
-        [x, eaveH / 2, (z0 + z1) / 2],
-        'Wall Bracing',
-        `BR-${braceCounter++}`,
-        null,
-        defaultComponentData('Wall Bracing', `${braceLen.toFixed(1)}m rod`, '25 kg', '300 kN')
-      );
-      brace2.rotation.x = -braceAngle1;
-      if (x > 0) brace2.rotation.y = Math.PI;
+      const r2 = addRod([x, eaveH, z0], [x, 0, z1], 0.02, steelAccent.clone());
+      r2.userData = {
+        id: `BR-${brN}`, type: 'Wall Bracing', material: 'Steel Rod',
+        position: { x, y: eaveH / 2, z: (z0 + z1) / 2 }, selectable: true,
+        ...componentData('Wall Bracing', `${Math.sqrt(bay ** 2 + eaveH ** 2).toFixed(1)}m rod`, '25 kg', '300 kN'),
+      };
+      components.push(r2);
+      brN++;
     }
   }
 
-  // --- Cross-bracing in roof plane (end bays) ---
-  for (const zi of [0, numBaysZ - 1]) {
-    const z0 = -D / 2 + zi * baySpacing;
-    const z1 = z0 + baySpacing;
-    const roofBraceLen = Math.sqrt((W / 2) ** 2 + baySpacing ** 2);
+  // ═══════════════════════════════════════════════════════════════════
+  // CLADDING (using BufferGeometry for proper vertex positions)
+  // ═══════════════════════════════════════════════════════════════════
 
-    for (const side of [-1, 1]) {
-      const cx = side * W / 4;
-      const midY = eaveH + ridgeH / 2;
-      const midZ = (z0 + z1) / 2;
+  const hD = D / 2;
+  const hW = W / 2;
+  const clad = 0.08; // cladding offset from frame
 
-      addDecor(
-        new THREE.CylinderGeometry(0.015, 0.015, roofBraceLen, 6),
-        steelDark.clone(),
-        [cx, midY, midZ],
-        [Math.atan2(baySpacing, 0), 0, Math.PI / 2]
-      );
-    }
-  }
-
-  // =====================================================
-  // CLADDING / PANELS
-  // =====================================================
-
-  // --- Side wall panels (left and right) ---
-  for (const x of [-W / 2, W / 2]) {
-    const wallMesh = addDecor(
-      new THREE.PlaneGeometry(D, eaveH),
-      corrugatedWall.clone(),
-      [x, eaveH / 2, 0],
-      [0, x < 0 ? Math.PI / 2 : -Math.PI / 2, 0]
-    );
-    // Add slight offset so panels sit outside the frame
-    wallMesh.position.x += (x < 0 ? -0.05 : 0.05);
-  }
-
-  // --- Front wall (with roll-up door opening) ---
-  const doorW = 6;
-  const doorH = 5;
-  const frontZ = -D / 2 - 0.05;
-
-  // Left of door
-  addDecor(
-    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
-    corrugatedWall.clone(),
-    [-(W + doorW) / 4, eaveH / 2, frontZ],
-    null
-  );
-  // Right of door
-  addDecor(
-    new THREE.PlaneGeometry((W - doorW) / 2, eaveH),
-    corrugatedWall.clone(),
-    [(W + doorW) / 4, eaveH / 2, frontZ],
-    null
-  );
-  // Above door
-  addDecor(
-    new THREE.PlaneGeometry(doorW, eaveH - doorH),
-    corrugatedWall.clone(),
-    [0, eaveH - (eaveH - doorH) / 2, frontZ],
-    null
-  );
-  // Front gable (triangle above eave)
-  const gableShape = new THREE.Shape();
-  gableShape.moveTo(-W / 2, 0);
-  gableShape.lineTo(W / 2, 0);
-  gableShape.lineTo(0, ridgeH);
-  gableShape.lineTo(-W / 2, 0);
-  const frontGable = addDecor(
-    new THREE.ShapeGeometry(gableShape),
-    corrugatedWall.clone(),
-    [0, eaveH, frontZ],
-    null
-  );
-
-  // --- Door frame ---
-  const frameThick = 0.12;
-  const frameDepth = 0.15;
-  // Left jamb
-  addDecor(
-    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
-    doorFrameMaterial.clone(),
-    [-doorW / 2, doorH / 2, -D / 2],
-    null
-  );
-  // Right jamb
-  addDecor(
-    new THREE.BoxGeometry(frameThick, doorH, frameDepth),
-    doorFrameMaterial.clone(),
-    [doorW / 2, doorH / 2, -D / 2],
-    null
-  );
-  // Header
-  addDecor(
-    new THREE.BoxGeometry(doorW + frameThick * 2, frameThick, frameDepth),
-    doorFrameMaterial.clone(),
-    [0, doorH + frameThick / 2, -D / 2],
-    null
-  );
-  // Door track guides (thin rails)
-  for (const dx of [-1, 1]) {
+  // ── Side walls ────────────────────────────────────────────────────
+  for (const s of [-1, 1]) {
+    const x = s * (hW + clad);
     addDecor(
-      new THREE.BoxGeometry(0.03, doorH, 0.04),
-      basePlateMaterial.clone(),
-      [dx * (doorW / 2 - 0.15), doorH / 2, -D / 2 + 0.05],
-      null
+      makeQuadGeo(
+        [x, 0, -hD], [x, 0, hD],
+        [x, eaveH, hD], [x, eaveH, -hD]
+      ),
+      wallPanelMat.clone(),
+      [0, 0, 0]
     );
   }
 
-  // --- Back wall ---
+  // ── Back wall ─────────────────────────────────────────────────────
+  const bz = hD + clad;
   addDecor(
-    new THREE.PlaneGeometry(W, eaveH),
-    corrugatedWall.clone(),
-    [0, eaveH / 2, D / 2 + 0.05],
-    [0, Math.PI, 0]
+    makeQuadGeo(
+      [-hW, 0, bz], [hW, 0, bz],
+      [hW, eaveH, bz], [-hW, eaveH, bz]
+    ),
+    wallPanelMat.clone(),
+    [0, 0, 0]
   );
   // Back gable
   addDecor(
-    new THREE.ShapeGeometry(gableShape),
-    corrugatedWall.clone(),
-    [0, eaveH, D / 2 + 0.05],
-    [0, Math.PI, 0]
+    makeTriGeo([-hW, eaveH, bz], [hW, eaveH, bz], [0, apexH, bz]),
+    wallPanelMat.clone(),
+    [0, 0, 0]
   );
 
-  // --- Sloped roof panels ---
-  const roofSlope = Math.sqrt((W / 2) ** 2 + ridgeH ** 2);
+  // ── Front wall (with roll-up door opening) ────────────────────────
+  const fz = -(hD + clad);
+  const doorW = 6;
+  const doorH = 5;
+  const doorHalf = doorW / 2;
+
+  // Left section
+  addDecor(
+    makeQuadGeo(
+      [-hW, 0, fz], [-doorHalf, 0, fz],
+      [-doorHalf, eaveH, fz], [-hW, eaveH, fz]
+    ),
+    wallPanelMat.clone(),
+    [0, 0, 0]
+  );
+  // Right section
+  addDecor(
+    makeQuadGeo(
+      [doorHalf, 0, fz], [hW, 0, fz],
+      [hW, eaveH, fz], [doorHalf, eaveH, fz]
+    ),
+    wallPanelMat.clone(),
+    [0, 0, 0]
+  );
+  // Above door
+  addDecor(
+    makeQuadGeo(
+      [-doorHalf, doorH, fz], [doorHalf, doorH, fz],
+      [doorHalf, eaveH, fz], [-doorHalf, eaveH, fz]
+    ),
+    wallPanelMat.clone(),
+    [0, 0, 0]
+  );
+  // Front gable
+  addDecor(
+    makeTriGeo([-hW, eaveH, fz], [hW, eaveH, fz], [0, apexH, fz]),
+    wallPanelMat.clone(),
+    [0, 0, 0]
+  );
+
+  // ── Door frame ────────────────────────────────────────────────────
+  const ft = 0.12;
+  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat.clone(), [-doorHalf, doorH / 2, -hD]);
+  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat.clone(), [doorHalf, doorH / 2, -hD]);
+  addDecor(new THREE.BoxGeometry(doorW + ft * 2, ft, 0.2), trimMat.clone(), [0, doorH + ft / 2, -hD]);
+
+  // ── Roof panels (proper vertex-positioned quads) ──────────────────
+  const roofOverhang = 0.3;
   // Left slope
-  const leftRoof = addDecor(
-    new THREE.PlaneGeometry(roofSlope, D + 0.3),
-    corrugatedRoof.clone(),
-    [-W / 4, eaveH + ridgeH / 2, 0],
-    [0, 0, rafterAngle]
+  addDecor(
+    makeQuadGeo(
+      [-(hW + roofOverhang), eaveH, -(hD + roofOverhang)],
+      [-(hW + roofOverhang), eaveH, hD + roofOverhang],
+      [0, apexH + 0.05, hD + roofOverhang],
+      [0, apexH + 0.05, -(hD + roofOverhang)]
+    ),
+    roofPanelMat.clone(),
+    [0, 0, 0]
   );
-  leftRoof.rotation.order = 'YXZ';
-  leftRoof.rotation.set(0, 0, rafterAngle);
-  leftRoof.position.set(-W / 4, eaveH + ridgeH / 2, 0);
-
   // Right slope
-  const rightRoof = addDecor(
-    new THREE.PlaneGeometry(roofSlope, D + 0.3),
-    corrugatedRoof.clone(),
-    [W / 4, eaveH + ridgeH / 2, 0],
-    null
+  addDecor(
+    makeQuadGeo(
+      [hW + roofOverhang, eaveH, -(hD + roofOverhang)],
+      [hW + roofOverhang, eaveH, hD + roofOverhang],
+      [0, apexH + 0.05, hD + roofOverhang],
+      [0, apexH + 0.05, -(hD + roofOverhang)]
+    ),
+    roofPanelMat.clone(),
+    [0, 0, 0]
   );
-  rightRoof.rotation.order = 'YXZ';
-  rightRoof.rotation.set(0, 0, -rafterAngle);
-  rightRoof.position.set(W / 4, eaveH + ridgeH / 2, 0);
 
-  // --- Eave trim / fascia (along the bottom edge of roof on both sides) ---
-  for (const side of [-1, 1]) {
+  // ── Eave fascia trim ──────────────────────────────────────────────
+  for (const s of [-1, 1]) {
     addDecor(
-      new THREE.BoxGeometry(0.08, 0.3, D + 0.4),
-      trimMaterial.clone(),
-      [side * W / 2, eaveH + 0.15, 0],
-      null
+      new THREE.BoxGeometry(0.08, 0.35, D + roofOverhang * 2),
+      trimMat.clone(),
+      [s * (hW + roofOverhang), eaveH + 0.15, 0]
     );
   }
   // Ridge cap
   addDecor(
-    new THREE.BoxGeometry(0.15, 0.08, D + 0.4),
-    trimMaterial.clone(),
-    [0, apexH + 0.04, 0],
-    null
+    new THREE.BoxGeometry(0.18, 0.1, D + roofOverhang * 2),
+    trimMat.clone(),
+    [0, apexH + 0.1, 0]
   );
 
-  // --- Downspouts and gutters (subtle detail) ---
-  for (const x of [-W / 2, W / 2]) {
-    for (const z of [-D / 2, D / 2]) {
-      // Gutter bracket at corner
+  // ── Gutters (L-shaped profile at eave) ────────────────────────────
+  for (const s of [-1, 1]) {
+    const gutterShape = new THREE.Shape();
+    gutterShape.moveTo(0, 0);
+    gutterShape.lineTo(0.12, 0);
+    gutterShape.lineTo(0.12, 0.08);
+    gutterShape.lineTo(0.02, 0.08);
+    gutterShape.lineTo(0.02, 0.02);
+    gutterShape.lineTo(0, 0.02);
+    gutterShape.lineTo(0, 0);
+    const gutterGeo = new THREE.ExtrudeGeometry(gutterShape, { depth: D + roofOverhang, bevelEnabled: false });
+    const gutter = new THREE.Mesh(gutterGeo, trimMat.clone());
+    gutter.position.set(s * (hW + roofOverhang) - (s > 0 ? 0.12 : 0), eaveH - 0.02, -(hD + roofOverhang / 2));
+    group.add(gutter);
+  }
+
+  // ── Downspouts ────────────────────────────────────────────────────
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
       addDecor(
-        new THREE.CylinderGeometry(0.04, 0.04, eaveH, 8),
-        trimMaterial.clone(),
-        [x + (x < 0 ? 0.06 : -0.06), eaveH / 2, z + (z < 0 ? 0.06 : -0.06)],
-        null
+        new THREE.CylinderGeometry(0.035, 0.035, eaveH, 8),
+        trimMat.clone(),
+        [sx * (hW + roofOverhang - 0.06), eaveH / 2, sz * (hD - 0.2)]
       );
     }
   }
 
-  // --- Small personnel door on right side wall ---
-  const personnelDoorW = 1.0;
-  const personnelDoorH = 2.2;
-  const personnelDoorZ = -D / 2 + 2;
-  // Cut visual: slightly recessed dark rectangle
+  // ── Personnel door on right wall ──────────────────────────────────
+  const pdW = 1.0, pdH = 2.2, pdZ = -hD + 2;
   addDecor(
-    new THREE.PlaneGeometry(personnelDoorW, personnelDoorH),
-    new THREE.MeshStandardMaterial({ color: 0x2a3a4a, metalness: 0.6, roughness: 0.4 }),
-    [W / 2 + 0.06, personnelDoorH / 2, personnelDoorZ],
-    [0, -Math.PI / 2, 0]
+    new THREE.PlaneGeometry(pdH, pdW),
+    new THREE.MeshStandardMaterial({ color: 0x28394a, metalness: 0.5, roughness: 0.5, side: THREE.DoubleSide }),
+    [hW + clad + 0.01, pdH / 2, pdZ],
+    [0, Math.PI / 2, 0]
   );
-  // Door frame
-  addDecor(
-    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
-    doorFrameMaterial.clone(),
-    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ - personnelDoorW / 2],
-    [0, 0, 0]
-  );
-  addDecor(
-    new THREE.BoxGeometry(0.05, personnelDoorH + 0.1, frameDepth),
-    doorFrameMaterial.clone(),
-    [W / 2 + 0.02, personnelDoorH / 2, personnelDoorZ + personnelDoorW / 2],
-    [0, 0, 0]
-  );
+  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat.clone(), [hW + clad, pdH / 2, pdZ - pdW / 2]);
+  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat.clone(), [hW + clad, pdH / 2, pdZ + pdW / 2]);
+  addDecor(new THREE.BoxGeometry(0.06, 0.06, pdW + 0.12), trimMat.clone(), [hW + clad, pdH + 0.04, pdZ]);
 
   group.userData.components = components;
   return group;
@@ -710,8 +638,8 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(15, 10, 15);
-    camera.lookAt(0, 2, 0);
+    camera.position.set(18, 12, 18);
+    camera.lookAt(0, 3, 0);
     cameraRef.current = camera;
 
     // Renderer with error handling
@@ -726,6 +654,8 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
       container.appendChild(renderer.domElement);
       rendererRef.current = renderer;
     } catch (error) {
@@ -734,28 +664,41 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       return;
     }
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0x404050, 0.5);
+    // Lighting - tuned for MeshPhysicalMaterial
+    const ambientLight = new THREE.AmbientLight(0x506070, 0.6);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(10, 20, 10);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(12, 25, 10);
     directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 1;
+    directionalLight.shadow.camera.far = 60;
+    directionalLight.shadow.camera.left = -20;
+    directionalLight.shadow.camera.right = 20;
+    directionalLight.shadow.camera.top = 20;
+    directionalLight.shadow.camera.bottom = -20;
     scene.add(directionalLight);
 
-    const fillLight = new THREE.DirectionalLight(0x4488ff, 0.3);
-    fillLight.position.set(-10, 5, -10);
+    const fillLight = new THREE.DirectionalLight(0x4488cc, 0.4);
+    fillLight.position.set(-10, 8, -10);
     scene.add(fillLight);
 
+    const rimLight = new THREE.DirectionalLight(0xffeedd, 0.25);
+    rimLight.position.set(-5, 3, 15);
+    scene.add(rimLight);
+
     // Ground plane
-    const groundGeometry = new THREE.PlaneGeometry(50, 50);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
+    const groundGeometry = new THREE.PlaneGeometry(60, 60);
+    const groundMaterial = new THREE.MeshStandardMaterial({
       color: 0x1a365d,
-      roughness: 0.8
+      roughness: 0.85,
+      metalness: 0.05,
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.1;
+    ground.position.y = -0.15;
     ground.receiveShadow = true;
     scene.add(ground);
 
@@ -895,7 +838,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
         // Adjust height
         camera.position.y = Math.max(2, Math.min(20, camera.position.y - deltaY * 0.05));
         
-        camera.lookAt(0, 2, 0);
+        camera.lookAt(0, 3, 0);
       }
       
       previousMouseRef.current = { x: event.clientX, y: event.clientY };
@@ -1028,9 +971,9 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       // Auto rotation when enabled
       if (isRotating) {
         angle += 0.001;
-        camera.position.x = 18 * Math.cos(angle);
-        camera.position.z = 18 * Math.sin(angle);
-        camera.lookAt(0, 2, 0);
+        camera.position.x = 22 * Math.cos(angle);
+        camera.position.z = 22 * Math.sin(angle);
+        camera.lookAt(0, 3, 0);
       }
       
       // Update hovered component reference
@@ -1132,7 +1075,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     } else if (direction === 'out') {
       camera.position.multiplyScalar(1.1);
     } else if (direction === 'reset') {
-      camera.position.set(15, 10, 15);
+      camera.position.set(18, 12, 18);
       setIsRotating(true);
       setSelectedComponent(null);
     }
