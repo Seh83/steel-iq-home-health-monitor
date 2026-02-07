@@ -264,72 +264,41 @@ function createWarehouse() {
   }
 
   // ── Ridge beam ────────────────────────────────────────────────────
-  addSteel(
-    new THREE.BoxGeometry(bS * 1.2, bS * 1.2, D),
-    steelAccent,
+  addFraming(
+    new THREE.BoxGeometry(bS, bS, D),
+    framingMat,
     [0, apexH, 0],
-    'Ridge Beam',
-    'RB-1',
-    componentData('Ridge Beam', `${D}m x ${(bS * 1.2).toFixed(2)}m`, '380 kg', '2400 kN')
+    'Ridge Board',
+    'RDG-1',
+    componentData('Ridge Board', `${D}m ridge`, '22 kg', '400 kN')
   );
 
-  // ── Purlins (3 per slope, run along Z) ────────────────────────────
-  for (let pi = 1; pi <= 3; pi++) {
-    const frac = pi / 4;
-    const px = (W / 2) * frac;
-    const py = eaveH + ridgeH * frac;
-    for (const s of [-1, 1]) {
-      addSteel(
-        new THREE.BoxGeometry(bS * 0.6, bS * 0.6, D),
-        steelPrimary,
-        [s * px, py, 0],
-        'Roof Purlin',
-        `PUR-${s < 0 ? 'L' : 'R'}${purN++}`,
-        componentData('Roof Purlin', `${D}m C-purlin`, '45 kg', '600 kN')
+  // ── Wall Studs (vertical framing, 16" o.c.) ───────────────────────
+  const studSpacing = 0.4;
+  for (let zi = -D / 2; zi <= D / 2; zi += studSpacing) {
+    for (const x of [-W / 2, W / 2]) {
+      addFraming(
+        new THREE.BoxGeometry(bS * 0.6, eaveH, bS * 0.6),
+        framingMat,
+        [x, eaveH / 2, zi],
+        'Wall Stud',
+        `WS-${grtN++}`,
+        componentData('Wall Stud', `2x4 stud`, '8 kg', '300 kN')
       );
     }
   }
 
-  // ── Girts (horizontal wall framing at 3 heights) ──────────────────
-  for (const gy of [1.5, 3.0, 4.5]) {
-    for (let zi = 0; zi < numBays; zi++) {
-      const zMid = -D / 2 + zi * bay + bay / 2;
-      for (const x of [-W / 2, W / 2]) {
-        const side = x < 0 ? 'L' : 'R';
-        addSteel(
-          new THREE.BoxGeometry(bS * 0.5, bS * 0.5, bay),
-          steelPrimary,
-          [x, gy, zMid],
-          'Wall Girt',
-          `GRT-${side}${grtN++}`,
-          componentData('Wall Girt', `${bay}m C-girt`, '35 kg', '400 kN')
-        );
-      }
-    }
-  }
-
-  // ── Wall X-bracing (end bays) ─────────────────────────────────────
-  for (const bi of [0, numBays - 1]) {
-    const z0 = -D / 2 + bi * bay;
-    const z1 = z0 + bay;
-    for (const x of [-W / 2, W / 2]) {
-      const r1 = addRod([x, 0, z0], [x, eaveH, z1], 0.02, steelAccent);
-      r1.userData = {
-        id: `BR-${brN}`, type: 'Wall Bracing', material: 'Steel Rod',
-        position: { x, y: eaveH / 2, z: (z0 + z1) / 2 }, selectable: true,
-        ...componentData('Wall Bracing', `${Math.sqrt(bay ** 2 + eaveH ** 2).toFixed(1)}m rod`, '25 kg', '300 kN'),
-      };
-      components.push(r1);
-      brN++;
-
-      const r2 = addRod([x, eaveH, z0], [x, 0, z1], 0.02, steelAccent);
-      r2.userData = {
-        id: `BR-${brN}`, type: 'Wall Bracing', material: 'Steel Rod',
-        position: { x, y: eaveH / 2, z: (z0 + z1) / 2 }, selectable: true,
-        ...componentData('Wall Bracing', `${Math.sqrt(bay ** 2 + eaveH ** 2).toFixed(1)}m rod`, '25 kg', '300 kN'),
-      };
-      components.push(r2);
-      brN++;
+  // Front & Back Wall Studs
+  for (let xi = -W / 2; xi <= W / 2; xi += studSpacing) {
+    for (const z of [-D / 2, D / 2]) {
+      addFraming(
+        new THREE.BoxGeometry(bS * 0.6, eaveH, bS * 0.6),
+        framingMat,
+        [xi, eaveH / 2, z],
+        'Wall Stud',
+        `WS-${grtN++}`,
+        componentData('Wall Stud', `2x4 stud`, '8 kg', '300 kN')
+      );
     }
   }
 
