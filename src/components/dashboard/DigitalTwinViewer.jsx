@@ -46,14 +46,14 @@ function createWarehouse() {
   });
 
   // ── Dimensions ────────────────────────────────────────────────────
-  const W = 20;
-  const D = 15;
-  const eaveH = 6;
+  const W = 16;
+  const D = 12;
+  const eaveH = 5;
   const ridgeH = 3;
   const apexH = eaveH + ridgeH;
-  const bay = 5;
+  const bay = 2;
   const numBays = Math.round(D / bay);
-  const bS = 0.15;  // beam cross-section size
+  const bS = 0.1;  // beam cross-section size
 
   // ── Helpers ───────────────────────────────────────────────────────
   const componentData = (type, dims, weight, loadRating) => ({
