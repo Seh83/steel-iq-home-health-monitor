@@ -897,7 +897,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     } else if (direction === 'out') {
       camera.position.multiplyScalar(1.1);
     } else if (direction === 'reset') {
-      camera.position.set(18, 12, 18);
+      camera.position.set(14, 10, 14);
       setIsRotating(true);
       setSelectedComponent(null);
     }
