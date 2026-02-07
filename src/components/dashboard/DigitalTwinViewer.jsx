@@ -661,7 +661,7 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
         // Adjust height
         camera.position.y = Math.max(2, Math.min(20, camera.position.y - deltaY * 0.05));
         
-        camera.lookAt(0, 3, 0);
+        camera.lookAt(0, 2.5, 0);
       }
       
       previousMouseRef.current = { x: event.clientX, y: event.clientY };
