@@ -310,7 +310,7 @@ function createWarehouse() {
   const hW = W / 2;
   const clad = 0.08;
 
-  // ── Side walls ────────────────────────────────────────────────────
+  // ── Side walls (transparent panels) ───────────────────────────────
   const sideWallL = makeQuadGeo(
     [-hW - clad, 0, -hD], [-hW - clad, 0, hD],
     [-hW - clad, eaveH, hD], [-hW - clad, eaveH, -hD]
@@ -323,36 +323,11 @@ function createWarehouse() {
   );
   addDecor(sideWallR, wallPanelMat, [0, 0, 0]);
 
-  // ── Front wall with door opening ──────────────────────────────────
-  const doorW = 6;
-  const doorH = 5;
-  const doorHalf = doorW / 2;
-
-  // Left of door
+  // ── Front wall ────────────────────────────────────────────────────
   addDecor(
     makeQuadGeo(
       [-hW, 0, -hD - clad], [-hW, eaveH, -hD - clad],
-      [-doorHalf, eaveH, -hD - clad], [-doorHalf, 0, -hD - clad]
-    ),
-    wallPanelMat,
-    [0, 0, 0]
-  );
-
-  // Right of door
-  addDecor(
-    makeQuadGeo(
-      [doorHalf, 0, -hD - clad], [doorHalf, eaveH, -hD - clad],
       [hW, eaveH, -hD - clad], [hW, 0, -hD - clad]
-    ),
-    wallPanelMat,
-    [0, 0, 0]
-  );
-
-  // Above door
-  addDecor(
-    makeQuadGeo(
-      [-doorHalf, doorH, -hD - clad], [-doorHalf, eaveH, -hD - clad],
-      [doorHalf, eaveH, -hD - clad], [doorHalf, doorH, -hD - clad]
     ),
     wallPanelMat,
     [0, 0, 0]
@@ -381,12 +356,6 @@ function createWarehouse() {
     wallPanelMat,
     [0, 0, 0]
   );
-
-  // ── Door frame ────────────────────────────────────────────────────
-  const ft = 0.12;
-  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat, [-doorHalf, doorH / 2, -hD]);
-  addDecor(new THREE.BoxGeometry(ft, doorH, 0.2), trimMat, [doorHalf, doorH / 2, -hD]);
-  addDecor(new THREE.BoxGeometry(doorW + ft * 2, ft, 0.2), trimMat, [0, doorH + ft / 2, -hD]);
 
   // ── Roof panels (proper vertex-positioned quads) ──────────────────
   const roofOverhang = 0.3;
