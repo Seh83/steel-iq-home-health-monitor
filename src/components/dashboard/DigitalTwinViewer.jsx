@@ -487,12 +487,12 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       return;
     }
 
-    // Lighting - tuned for MeshPhysicalMaterial
-    const ambientLight = new THREE.AmbientLight(0x506070, 0.6);
+    // Lighting - tuned for visible framing
+    const ambientLight = new THREE.AmbientLight(0x606a80, 0.7);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    directionalLight.position.set(12, 25, 10);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    directionalLight.position.set(10, 20, 8);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
