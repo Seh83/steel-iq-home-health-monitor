@@ -525,9 +525,9 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Warehouse structure
+    // House structure
     const warehouse = createWarehouse();
-    warehouse.position.y = 0.1;
+    warehouse.position.y = 0;
     scene.add(warehouse);
     frameRef.current = warehouse;
 
