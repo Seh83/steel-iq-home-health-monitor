@@ -793,9 +793,9 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
       // Auto rotation when enabled
       if (isRotating) {
         angle += 0.001;
-        camera.position.x = 22 * Math.cos(angle);
-        camera.position.z = 22 * Math.sin(angle);
-        camera.lookAt(0, 3, 0);
+        camera.position.x = 18 * Math.cos(angle);
+        camera.position.z = 18 * Math.sin(angle);
+        camera.lookAt(0, 2.5, 0);
       }
       
       // Update hovered component reference
