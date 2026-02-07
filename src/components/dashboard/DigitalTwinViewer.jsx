@@ -179,24 +179,17 @@ function createWarehouse() {
 
   let colN = 1, ebN = 1, rtN = 1, rrN = 1, purN = 1, grtN = 1, brN = 1;
 
-  // ── Columns ───────────────────────────────────────────────────────
+  // ── Corner Posts ───────────────────────────────────────────────────
   for (let zi = 0; zi <= numBays; zi++) {
     const z = -D / 2 + zi * bay;
     for (const x of [-W / 2, W / 2]) {
-      addSteel(
+      addFraming(
         new THREE.BoxGeometry(bS, eaveH, bS),
-        steelPrimary,
+        framingMat,
         [x, eaveH / 2, z],
-        'Structural Column',
-        `COL-${colN++}`,
-        componentData('Structural Column', `W8x31 (${bS}m x ${eaveH}m)`, '285 kg', '2500 kN')
-      );
-
-      // Base plate
-      addDecor(
-        new THREE.BoxGeometry(bS * 2.5, 0.05, bS * 2.5),
-        steelAccent,
-        [x, 0.025, z]
+        'Wall Stud',
+        `STD-${colN++}`,
+        componentData('Wall Stud', `2x4 (${bS}m x ${eaveH}m)`, '15 kg', '800 kN')
       );
     }
   }
