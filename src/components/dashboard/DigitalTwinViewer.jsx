@@ -612,8 +612,8 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     const skyGeometry = new THREE.SphereGeometry(30, 32, 32);
     const skyMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        topColor: { value: new THREE.Color(0x1e3a5f) },
-        bottomColor: { value: new THREE.Color(0x0f172a) }
+        topColor: { value: new THREE.Color(0x2a3a50) },
+        bottomColor: { value: new THREE.Color(0x1a2530) }
       },
       vertexShader: `
         varying vec3 vWorldPosition;
