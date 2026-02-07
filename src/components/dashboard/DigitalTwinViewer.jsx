@@ -70,7 +70,7 @@ function createWarehouse() {
     ],
   });
 
-  const addSteel = (geo, mat, pos, type, id, data, rot = null) => {
+  const addFraming = (geo, mat, pos, type, id, data, rot = null) => {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(pos[0], pos[1], pos[2]);
     if (rot) mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
@@ -79,7 +79,7 @@ function createWarehouse() {
     mesh.userData = {
       id,
       type,
-      material: 'Steel W-Section',
+      material: 'Wood Framing',
       position: { x: pos[0], y: pos[1], z: pos[2] },
       selectable: true,
       ...data,
