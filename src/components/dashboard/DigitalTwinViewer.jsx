@@ -7,58 +7,42 @@ import ComponentPropertiesPanel from './ComponentPropertiesPanel';
 import PanelDetailView from '../panels/PanelDetailView';
 import SensorActionModal from '../sensors/SensorActionModal';
 
-// Warehouse building generator - high-quality structural steel warehouse with gabled roof
+// Residential house building generator - visible framing structure
 function createWarehouse() {
   const group = new THREE.Group();
   const components = [];
 
   // ── Materials ──────────────────────────────────────────────────────
-  const steelPrimary = new THREE.MeshPhysicalMaterial({
-    color: 0x708090,
-    metalness: 0.82,
-    roughness: 0.28,
-    clearcoat: 0.1,
-    clearcoatRoughness: 0.4,
-  });
-
-  const steelAccent = new THREE.MeshPhysicalMaterial({
+  const framingMat = new THREE.MeshStandardMaterial({
     color: 0x5a6e7f,
-    metalness: 0.88,
-    roughness: 0.22,
-    clearcoat: 0.15,
-    clearcoatRoughness: 0.3,
+    metalness: 0.3,
+    roughness: 0.7,
   });
 
-  const wallPanelMat = new THREE.MeshPhysicalMaterial({
-    color: 0xd0d8e0,
-    metalness: 0.5,
-    roughness: 0.5,
+  const wallPanelMat = new THREE.MeshStandardMaterial({
+    color: 0x3a4a5a,
+    transparent: true,
+    opacity: 0.15,
     side: THREE.DoubleSide,
   });
 
-  const roofPanelMat = new THREE.MeshPhysicalMaterial({
-    color: 0xaab8c8,
-    metalness: 0.6,
-    roughness: 0.4,
+  const roofPanelMat = new THREE.MeshStandardMaterial({
+    color: 0x2a3a4a,
+    transparent: true,
+    opacity: 0.2,
     side: THREE.DoubleSide,
-  });
-
-  const trimMat = new THREE.MeshPhysicalMaterial({
-    color: 0x2c4a6e,
-    metalness: 0.75,
-    roughness: 0.3,
   });
 
   const floorMat = new THREE.MeshStandardMaterial({
-    color: 0x808080,
-    roughness: 0.92,
-    metalness: 0.05,
+    color: 0x404040,
+    roughness: 0.9,
+    metalness: 0.1,
   });
 
   const edgeLineMat = new THREE.LineBasicMaterial({
-    color: 0x3a4a5a,
+    color: 0x6a7a8a,
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.6,
   });
 
   // ── Dimensions ────────────────────────────────────────────────────
