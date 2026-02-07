@@ -357,7 +357,7 @@ function createWarehouse() {
     [0, 0, 0]
   );
 
-  // ── Roof panels (proper vertex-positioned quads) ──────────────────
+  // ── Roof panels (transparent sheathing) ───────────────────────────
   const roofOverhang = 0.3;
   // Left slope
   addDecor(
@@ -382,65 +382,6 @@ function createWarehouse() {
     roofPanelMat,
     [0, 0, 0]
   );
-
-  // ── Eave fascia trim ──────────────────────────────────────────────
-  for (const s of [-1, 1]) {
-    addDecor(
-      new THREE.BoxGeometry(0.08, 0.3, D + 0.4),
-      trimMat,
-      [s * hW, eaveH + 0.15, 0]
-    );
-  }
-
-  // Ridge cap
-  addDecor(
-    new THREE.BoxGeometry(0.15, 0.08, D + 0.4),
-    trimMat,
-    [0, apexH + 0.04, 0]
-  );
-
-  // ── Gutters (L-shaped profile at eave) ────────────────────────────
-  for (const s of [-1, 1]) {
-    const gutterShape = new THREE.Shape();
-    gutterShape.moveTo(0, 0);
-    gutterShape.lineTo(0.12, 0);
-    gutterShape.lineTo(0.12, 0.08);
-    gutterShape.lineTo(0.02, 0.08);
-    gutterShape.lineTo(0.02, 0.02);
-    gutterShape.lineTo(0, 0.02);
-    gutterShape.lineTo(0, 0);
-    const gutterGeo = new THREE.ExtrudeGeometry(gutterShape, { depth: D + roofOverhang, bevelEnabled: false });
-    const gutter = new THREE.Mesh(gutterGeo, trimMat);
-    gutter.position.set(s * (hW + roofOverhang) - (s > 0 ? 0.12 : 0), eaveH - 0.02, -(hD + roofOverhang / 2));
-    group.add(gutter);
-  }
-
-  // ── Downspouts ────────────────────────────────────────────────────
-  for (const sx of [-1, 1]) {
-    for (const sz of [-1, 1]) {
-      addDecor(
-        new THREE.CylinderGeometry(0.04, 0.04, eaveH, 8),
-        trimMat,
-        [sx * hW + (sx < 0 ? 0.06 : -0.06), eaveH / 2, sz * hD + (sz < 0 ? 0.06 : -0.06)]
-      );
-    }
-  }
-
-  // ── Personnel door (small door on right wall) ─────────────────────
-  const pdW = 1.0;
-  const pdH = 2.2;
-  const pdZ = -D / 2 + 2;
-  // Door panel
-  addDecor(
-    new THREE.PlaneGeometry(pdW, pdH),
-    new THREE.MeshStandardMaterial({ color: 0x2a3a4a, metalness: 0.6, roughness: 0.4 }),
-    [hW + clad + 0.02, pdH / 2, pdZ],
-    [0, -Math.PI / 2, 0]
-  );
-  // Frame
-  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat, [hW + clad, pdH / 2, pdZ - pdW / 2]);
-  addDecor(new THREE.BoxGeometry(0.06, pdH + 0.08, 0.12), trimMat, [hW + clad, pdH / 2, pdZ + pdW / 2]);
-  addDecor(new THREE.BoxGeometry(0.06, 0.06, pdW + 0.12), trimMat, [hW + clad, pdH + 0.04, pdZ]);
 
   group.userData.components = components;
   return group;
