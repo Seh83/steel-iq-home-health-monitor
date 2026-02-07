@@ -23,7 +23,7 @@ export const sensorData = {
       metric: "HUMIDITY",
       value: "88.4%",
       status: "Active Leak",
-      coordinates: { x: -3, y: 2, z: 2 }
+      coordinates: { x: -4, y: 2, z: 3 }
     },
     {
       id: "alert-2",
@@ -35,7 +35,7 @@ export const sensorData = {
       metric: "TEMP",
       value: "135.2°F",
       status: "Warning",
-      coordinates: { x: 2.5, y: 1, z: -1 }
+      coordinates: { x: 3, y: 1.5, z: -2 }
     }
   ]
 };
