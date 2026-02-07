@@ -461,8 +461,8 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(18, 12, 18);
-    camera.lookAt(0, 3, 0);
+    camera.position.set(14, 10, 14);
+    camera.lookAt(0, 2.5, 0);
     cameraRef.current = camera;
 
     // Renderer with error handling
