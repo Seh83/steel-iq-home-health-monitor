@@ -455,8 +455,8 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
 
     // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1e3a5f);
-    scene.fog = new THREE.Fog(0x1e3a5f, 15, 40);
+    scene.background = new THREE.Color(0x2a3a50);
+    scene.fog = new THREE.Fog(0x2a3a50, 15, 35);
     sceneRef.current = scene;
 
     // Camera
