@@ -513,11 +513,11 @@ export default function DigitalTwinViewer({ alerts, panels = [], sensors = [] })
     scene.add(rimLight);
 
     // Ground plane
-    const groundGeometry = new THREE.PlaneGeometry(60, 60);
+    const groundGeometry = new THREE.PlaneGeometry(50, 50);
     const groundMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1a365d,
-      roughness: 0.85,
-      metalness: 0.05,
+      color: 0x2a3545,
+      roughness: 0.9,
+      metalness: 0.1,
     });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
