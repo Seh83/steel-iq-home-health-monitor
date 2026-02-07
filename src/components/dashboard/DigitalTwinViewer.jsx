@@ -194,32 +194,32 @@ function createWarehouse() {
     }
   }
 
-  // ── Eave beams (side walls, along Z) ──────────────────────────────
+  // ── Top Plates (side walls, along Z) ──────────────────────────────
   for (let zi = 0; zi < numBays; zi++) {
     const zMid = -D / 2 + zi * bay + bay / 2;
     for (const x of [-W / 2, W / 2]) {
       const side = x < 0 ? 'L' : 'R';
-      addSteel(
-        new THREE.BoxGeometry(bS * 0.9, bS * 0.9, bay),
-        steelPrimary,
+      addFraming(
+        new THREE.BoxGeometry(bS * 0.8, bS * 0.8, bay),
+        framingMat,
         [x, eaveH, zMid],
-        'Eave Beam',
-        `EB-${side}${ebN++}`,
-        componentData('Eave Beam', `${bay}m x ${bS}m`, '180 kg', '1800 kN')
+        'Top Plate',
+        `TP-${side}${ebN++}`,
+        componentData('Top Plate', `${bay}m x ${bS}m`, '12 kg', '500 kN')
       );
     }
   }
 
-  // ── Perimeter beams (front & back, along X) ──────────────────────
+  // ── Top Plates (front & back, along X) ──────────────────────
   for (const z of [-D / 2, D / 2]) {
     const side = z < 0 ? 'F' : 'B';
-    addSteel(
-      new THREE.BoxGeometry(W, bS * 0.9, bS * 0.9),
-      steelPrimary,
+    addFraming(
+      new THREE.BoxGeometry(W, bS * 0.8, bS * 0.8),
+      framingMat,
       [0, eaveH, z],
-      'Perimeter Beam',
-      `PB-${side}1`,
-      componentData('Perimeter Beam', `${W}m x ${bS}m`, '340 kg', '1800 kN')
+      'Top Plate',
+      `TP-${side}1`,
+      componentData('Top Plate', `${W}m x ${bS}m`, '20 kg', '500 kN')
     );
   }
 
