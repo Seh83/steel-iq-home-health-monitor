@@ -223,7 +223,7 @@ function createWarehouse() {
     );
   }
 
-  // ── Roof trusses at each bay line ─────────────────────────────────
+  // ── Roof Rafters at each bay line ─────────────────────────────────
   const rafterLen = Math.sqrt((W / 2) ** 2 + ridgeH ** 2);
   const rafterAngle = Math.atan2(ridgeH, W / 2);
 
@@ -231,75 +231,36 @@ function createWarehouse() {
     const z = -D / 2 + zi * bay;
 
     // Left rafter
-    addSteel(
-      new THREE.BoxGeometry(rafterLen, bS, bS),
-      steelAccent,
+    addFraming(
+      new THREE.BoxGeometry(rafterLen, bS * 0.9, bS * 0.9),
+      framingMat,
       [-W / 4, eaveH + ridgeH / 2, z],
       'Roof Rafter',
-      `RR-L${rrN}`,
-      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN'),
+      `RFT-L${rrN}`,
+      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '18 kg', '600 kN'),
       [0, 0, rafterAngle]
     );
 
     // Right rafter
-    addSteel(
-      new THREE.BoxGeometry(rafterLen, bS, bS),
-      steelAccent,
+    addFraming(
+      new THREE.BoxGeometry(rafterLen, bS * 0.9, bS * 0.9),
+      framingMat,
       [W / 4, eaveH + ridgeH / 2, z],
       'Roof Rafter',
-      `RR-R${rrN++}`,
-      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '210 kg', '2000 kN'),
+      `RFT-R${rrN++}`,
+      componentData('Roof Rafter', `${rafterLen.toFixed(1)}m rafter`, '18 kg', '600 kN'),
       [0, 0, -rafterAngle]
     );
 
-    // Bottom chord
-    addSteel(
+    // Ceiling joist
+    addFraming(
       new THREE.BoxGeometry(W, bS * 0.7, bS * 0.7),
-      steelPrimary,
-      [0, eaveH + bS * 0.5, z],
-      'Roof Truss',
-      `RT-${rtN++}`,
-      componentData('Roof Truss', `${W}m bottom chord`, '320 kg', '2200 kN')
+      framingMat,
+      [0, eaveH + bS * 0.4, z],
+      'Ceiling Joist',
+      `CJ-${rtN++}`,
+      componentData('Ceiling Joist', `${W}m joist`, '16 kg', '500 kN')
     );
-
-    // King post
-    addDecor(
-      new THREE.BoxGeometry(bS * 0.6, ridgeH, bS * 0.6),
-      steelAccent,
-      [0, eaveH + ridgeH / 2, z]
-    );
-
-    // Diagonal web members
-    for (const side of [-1, 1]) {
-      const diagX = side * W / 4;
-      const diagLen = Math.sqrt((W / 4) ** 2 + ridgeH ** 2);
-      const diagAngle = Math.atan2(ridgeH, W / 4) * side;
-      addDecor(
-        new THREE.BoxGeometry(diagLen, bS * 0.5, bS * 0.5),
-        steelAccent,
-        [diagX / 2, eaveH + ridgeH / 2, z],
-        [0, 0, diagAngle]
-      );
-      addDecor(
-        new THREE.BoxGeometry(bS * 0.5, ridgeH / 2, bS * 0.5),
-        steelAccent,
-        [diagX, eaveH + ridgeH / 4, z]
-      );
-    }
-
-    // Gusset plates
-    for (const s of [-1, 1]) {
-      const gussetShape = new THREE.Shape();
-      gussetShape.moveTo(0, 0);
-      gussetShape.lineTo(s * 0.6, 0);
-      gussetShape.lineTo(0, 0.6);
-      gussetShape.lineTo(0, 0);
-      const gussetGeo = new THREE.ExtrudeGeometry(gussetShape, { depth: bS * 0.3, bevelEnabled: false });
-      const gusset = new THREE.Mesh(gussetGeo, steelAccent);
-      gusset.position.set(s * W / 2, eaveH, z);
-      gusset.position.z -= bS * 0.15;
-      group.add(gusset);
-    }
   }
 
   // ── Ridge beam ────────────────────────────────────────────────────
