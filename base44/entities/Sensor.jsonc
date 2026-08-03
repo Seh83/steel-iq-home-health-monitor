@@ -1,0 +1,79 @@
+{
+  "name": "Sensor",
+  "type": "object",
+  "properties": {
+    "sensor_id": {
+      "type": "string",
+      "description": "Unique sensor identifier"
+    },
+    "panel_id": {
+      "type": "string",
+      "description": "Associated panel ID"
+    },
+    "sensor_type": {
+      "type": "string",
+      "enum": [
+        "temperature",
+        "moisture",
+        "stress",
+        "vibration",
+        "air_quality",
+        "smoke"
+      ],
+      "description": "Type of sensor"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "online",
+        "offline",
+        "warning",
+        "critical"
+      ],
+      "default": "online",
+      "description": "Sensor operational status"
+    },
+    "battery_level": {
+      "type": "number",
+      "description": "Battery percentage (0-100)"
+    },
+    "last_reading": {
+      "type": "number",
+      "description": "Most recent sensor reading value"
+    },
+    "reading_unit": {
+      "type": "string",
+      "description": "Unit of measurement"
+    },
+    "last_ping": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last communication timestamp"
+    },
+    "install_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Installation date"
+    },
+    "position": {
+      "type": "object",
+      "description": "3D position coordinates",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "required": [
+    "sensor_id",
+    "panel_id",
+    "sensor_type"
+  ]
+}

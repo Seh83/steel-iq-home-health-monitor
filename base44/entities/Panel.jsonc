@@ -1,0 +1,72 @@
+{
+  "name": "Panel",
+  "type": "object",
+  "properties": {
+    "panel_id": {
+      "type": "string",
+      "description": "Unique panel identifier"
+    },
+    "panel_name": {
+      "type": "string",
+      "description": "Human-readable panel name"
+    },
+    "panel_type": {
+      "type": "string",
+      "enum": [
+        "wall",
+        "ceiling",
+        "floor",
+        "roof"
+      ],
+      "description": "Type of panel"
+    },
+    "location": {
+      "type": "string",
+      "description": "Physical location description"
+    },
+    "material": {
+      "type": "string",
+      "description": "Panel material specification"
+    },
+    "dimensions": {
+      "type": "string",
+      "description": "Panel dimensions"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "good",
+        "warning",
+        "critical",
+        "offline"
+      ],
+      "default": "good",
+      "description": "Overall panel health status"
+    },
+    "position": {
+      "type": "object",
+      "description": "3D position coordinates",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
+      }
+    },
+    "install_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Installation date"
+    }
+  },
+  "required": [
+    "panel_id",
+    "panel_name",
+    "panel_type"
+  ]
+}
